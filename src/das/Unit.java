@@ -51,8 +51,8 @@ public class Unit implements Serializable {
 		this.y = y;
 	}
 	public void setPosition(int x, int y) {
-		this.x = x;
-		this.y = y;
+		setX(x);
+		setY(y);
 	}
 	public int getHp() {
 		return hp;
@@ -83,6 +83,9 @@ public class Unit implements Serializable {
 	}
 	public int getId() {
 		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
 	}
 	public boolean canReach(Unit other) {
 		return Math.abs(this.x - other.x) + Math.abs(this.y - other.y) 

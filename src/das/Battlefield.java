@@ -12,15 +12,13 @@ public class Battlefield {
 	
 	private Battlefield() {
 		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
-		
-		// Place dragons
-		dragonCount = 10;
+		dragonCount = 0;
 	}
 	
 	public static Battlefield getBattlefield() {
 		if (battlefield != null) return battlefield;
 		
-		return new Battlefield();
+		return battlefield = new Battlefield();
 	}
 	
 	public Unit getUnit(int x, int y) {
@@ -29,6 +27,7 @@ public class Battlefield {
 	
 	public void placeUnit(Unit u) {
 		map[u.getX()][u.getY()] = u;
+		if (!u.isType()) dragonCount++;
 	}
 	
 	public boolean moveUnit(Unit unit, MoveType move) {
@@ -69,7 +68,7 @@ public class Battlefield {
 		if (!src.canReach(dest) && (src.isType() ^ dest.isType())) return false;
 		
 		dest.hurt(src.getAp());
-		
+
 		if (!dest.isAlive()) {
 			killUnit(dest);
 		}
@@ -79,11 +78,13 @@ public class Battlefield {
 	
 	public void killUnit(Unit unit) {
 		map[unit.getX()][unit.getY()] = null;
+		if (!unit.isType()) dragonCount--;
+		
 		// TODO how does a server get this message to the clients?
 	}
 	
 	public boolean isOccupied(int x, int y) {
-		return map[x][y] == null;
+		return map[x][y] != null;
 	}
 	
 	public boolean inBounds(int x, int y) {
@@ -91,7 +92,7 @@ public class Battlefield {
 	}
 	
 	public boolean hasDragons() {
-		return dragonCount == 0;
+		return dragonCount > 0;
 	}
 	
 	public List<Unit> getSurroundingUnits(Unit unit) {
@@ -127,8 +128,8 @@ public class Battlefield {
 			for (int xtoy = 0; xtoy <= dist; xtoy++) {
 				for(int xpn : posneg) {
 					for (int ypn : posneg) {
-						destx = xpn * (dist - xtoy);
-						desty = ypn * xtoy;
+						destx = ux + xpn * (dist - xtoy);
+						desty = uy + ypn * (xtoy);
 						if (inBounds(destx, desty) 
 								&& isOccupied(destx, desty)
 								&& !getUnit(destx, desty).isType()) {

@@ -3,6 +3,7 @@ import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 import java.util.Queue;
 
@@ -10,7 +11,7 @@ import das.Client;
 import das.Node_RMI;
 import das.Server;
 
-public abstract class Message implements Serializable {
+public abstract class Message extends UnicastRemoteObject implements Serializable {
 	private static final long serialVersionUID = 5970408991964088527L;
 	public static final int FWD_COUNT = 3;
 	public static final int port = 1003;
@@ -23,19 +24,26 @@ public abstract class Message implements Serializable {
 	private Message[] messageTail;
 	
 	
-	public Message(Client from, int to_id) {
+	public Message(Client from, int to_id) throws RemoteException {
 		this(from, getComponent("Server_"+to_id), "Server_"+to_id);
 	}
 	
-	public Message(Server from, String to_id) {
+	public Message(Server from, String to_id) throws RemoteException {
 		this(from, getComponent(to_id), to_id);
 	}
 	
-	public Message(Node_RMI from, Node_RMI to, String id) {
+	public Message(Node_RMI from, Node_RMI to, String id) throws RemoteException {
 		super();
 		this.from = from;
 		this.receiver = to;
-		this.from_id = from.getName();
+		String fromName;
+		try {
+			fromName = from.getName();
+		} catch (RemoteException e) {
+			fromName = "ERROR";
+			e.printStackTrace();
+		}
+		this.from_id = fromName;
 		this.receiver_id = id;		
 	}
 	

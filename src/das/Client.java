@@ -18,7 +18,7 @@ import das.message.PulseMessage;
 import das.message.RetransmitMessage;
 
 
-public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
+public class Client implements Node_RMI, Runnable {
 	private static final long serialVersionUID = 8743582021067062104L;
 	
 	private int id;
@@ -36,7 +36,7 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 	private List<Unit> units;
 	private Unit player;
 	
-	public Client() throws RemoteException {
+	public Client() {
 		super();
 		state = State.Disconnected;
 		sentMessages = new LinkedList<Message>();
@@ -49,9 +49,14 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 	public void run() {
 		// TODO Connect to server
 		// TODO Initialize battlefield
+		_canMove = true;
+		state = State.Running;
+		// Start main loop
 		while(state == State.Running) {
 			if(_canMove) {
+				System.out.print("Client doing move: ");
 				doMove();
+				System.out.print("\n");
 			}
 			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
@@ -66,33 +71,37 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 		synchronized(bf) {
 			if(!bf.hasDragons() || !player.isAlive()) {
 				// Game is over, change client state
+				System.out.print("Game over");
 				state = State.Exit;
 				return;
 			}
 			List<Unit> nearUnits = bf.getSurroundingUnits(player);
+			
 			// Heal other player if near and hurt
-			nearUnits.forEach(c -> { 
-				if (c.isType() && c.needsHealing()) {
-					c.heal(player.getAp());
+			for (Unit u : nearUnits) {
+				if (u.isType() && u.needsHealing()) {
+					bf.healUnit(player, u);
+					System.out.print("Healed player " + u.getId());
 					return;
 				}
-			});
+			}
 			// Attack dragon if it is near
-			nearUnits.forEach(c -> { 
-				if (!c.isType()) {
-					c.hurt(player.getAp());
+			for (Unit u : nearUnits) {
+				if (!u.isType()) {
+					bf.attackUnit(player, u);
+					System.out.printf("Attacked %d, health left: %d", u.getId(), u.getHp());
 					return;
 				}
-			});
+			}
 			// Move towards nearest dragon
 			Unit dragon = bf.getClosestDragon(player);
 			int distX = dragon.getX() - player.getX();
 			int distY = dragon.getY() - player.getY();
 			MoveType m;
-			if (Math.abs(distX) < Math.abs(distY) && distX != 0) {
+			if (Math.abs(distX) < Math.abs(distY)) {
 				// Attempt move on x
 				m = distX < 0 ? MoveType.Left : MoveType.Right;
-				if (!bf.moveUnit(player, m)) {
+				if (distX == 0 || !bf.moveUnit(player, m)) {
 					// Otherwise just try on y
 					m = distY < 0 ? MoveType.Down : MoveType.Up;
 					bf.moveUnit(player, m);
@@ -100,18 +109,24 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 			} else {
 				// Attempt move on y
 				m = distY < 0 ? MoveType.Down : MoveType.Up;
-				if (!bf.moveUnit(player, m)) {
+				if (distY == 0 || !bf.moveUnit(player, m)) {
 					// Otherwise just try on x
 					m = distX < 0 ? MoveType.Left : MoveType.Right;
 					bf.moveUnit(player, m);
 				}
 			}
+			System.out.printf("Moved to %s, now at x %d, y %d ", m.toString(), player.getX(), player.getY());
 		}
 	}
 	
 	public void connect() {
 		server_id = (int) (Math.random() * Server.addresses.length);
-		sendMessage(new ConnectMessage(this, server_id));
+		try {
+			sendMessage(new ConnectMessage(this, server_id));
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		resetPulseTimer();
 	}
 
@@ -134,7 +149,12 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 				} catch (InterruptedException e) {
 					return;
 				}
-				sendMessage(new PingMessage(Client.this, server_id));
+				try {
+					sendMessage(new PingMessage(Client.this, server_id));
+				} catch (RemoteException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				try {
 					Thread.sleep(3 * Server.PULSE);
 				} catch (InterruptedException e) {
@@ -160,7 +180,12 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 		if (firstMessage.getDatamessage_id() != expectedDataMessageID) {
 			//TODO YOu could also set a timer for this to wait a little longer before requesting retransmision
 			//TODO request all messages between first and expected
-			sendMessage(new RetransmitMessage(this, server_id, expectedDataMessageID));
+			try {
+				sendMessage(new RetransmitMessage(this, server_id, expectedDataMessageID));
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		while (!dataMessageBuffer.isEmpty() && dataMessageBuffer.get(0).getDatamessage_id() == expectedDataMessageID) {
 			deliverData(dataMessageBuffer.remove(0));
@@ -204,5 +229,9 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 	@Override
 	public String getName() {
 		return "Client_"+id;		
+	}
+	
+	public void setPlayer(Unit player) {
+		this.player = player;
 	}
 }
