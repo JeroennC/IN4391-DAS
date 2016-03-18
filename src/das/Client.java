@@ -30,24 +30,81 @@ public class Client extends UnicastRemoteObject implements Node_RMI, Runnable {
 	private List<ActionMessage> sentActionMessages;
 	private int lastMessageSentID = 0;
 	private int expectedDataMessageID = 0;
+	private enum State { Disconnected, Initialization, Running, Exit };
 	
+	private State state;
 	private List<Unit> units;
 	private Unit player;
 	
 	public Client() throws RemoteException {
 		super();
+		state = State.Disconnected;
 		sentMessages = new LinkedList<Message>();
 		sentActionMessages = new LinkedList<ActionMessage>();
-		List<Unit> units = new ArrayList<Unit>();
+		//List<Unit> units = new ArrayList<Unit>();
 		dataMessageBuffer = new LinkedList<DataMessage>();
 	}
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
-		while(true) { //TODO exit condition
+		// TODO Connect to server
+		// TODO Initialize battlefield
+		while(state == State.Running) {
 			if(_canMove) {
-				
+				doMove();
+			}
+			// TODO sleep for a little time? Busy waiting is a bit much
+			try {Thread.sleep(100);} catch (InterruptedException e) {}
+		}
+		// TODO Disconnect
+		System.out.println("Game is over.");
+	}
+	
+	// Synchronized on battlefield so other threads don't mess things up
+	public void doMove() {
+		Battlefield bf = Battlefield.getBattlefield();
+		synchronized(bf) {
+			if(!bf.hasDragons() || !player.isAlive()) {
+				// Game is over, change client state
+				state = State.Exit;
+				return;
+			}
+			List<Unit> nearUnits = bf.getSurroundingUnits(player);
+			// Heal other player if near and hurt
+			nearUnits.forEach(c -> { 
+				if (c.isType() && c.needsHealing()) {
+					c.heal(player.getAp());
+					return;
+				}
+			});
+			// Attack dragon if it is near
+			nearUnits.forEach(c -> { 
+				if (!c.isType()) {
+					c.hurt(player.getAp());
+					return;
+				}
+			});
+			// Move towards nearest dragon
+			Unit dragon = bf.getClosestDragon(player);
+			int distX = dragon.getX() - player.getX();
+			int distY = dragon.getY() - player.getY();
+			MoveType m;
+			if (Math.abs(distX) < Math.abs(distY) && distX != 0) {
+				// Attempt move on x
+				m = distX < 0 ? MoveType.Left : MoveType.Right;
+				if (!bf.moveUnit(player, m)) {
+					// Otherwise just try on y
+					m = distY < 0 ? MoveType.Down : MoveType.Up;
+					bf.moveUnit(player, m);
+				}
+			} else {
+				// Attempt move on y
+				m = distY < 0 ? MoveType.Down : MoveType.Up;
+				if (!bf.moveUnit(player, m)) {
+					// Otherwise just try on x
+					m = distX < 0 ? MoveType.Left : MoveType.Right;
+					bf.moveUnit(player, m);
+				}
 			}
 		}
 	}
