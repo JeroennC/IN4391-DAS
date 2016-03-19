@@ -33,6 +33,7 @@ public class Client extends Node {
 	
 	private volatile State state;
 	private List<Unit> units;
+	private Battlefield bf;
 	private Unit player;
 	
 	public Client(int id) throws RemoteException {
@@ -85,7 +86,6 @@ public class Client extends Node {
 	
 	// Synchronized on battlefield so other threads don't mess things up
 	public void doMove() {
-		Battlefield bf = Battlefield.getBattlefield();
 		synchronized(bf) {
 			if(!bf.hasDragons() || !player.isAlive()) {
 				// Game is over, change client state

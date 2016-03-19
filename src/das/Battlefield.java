@@ -4,21 +4,14 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class Battlefield {
-	private static Battlefield battlefield;
 	public static final int MAP_WIDTH = 25;
 	public static final int MAP_HEIGHT = 25;
 	private Unit[][] map;
 	private int dragonCount;
 	
-	private Battlefield() {
+	public Battlefield() {
 		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
 		dragonCount = 0;
-	}
-	
-	public static Battlefield getBattlefield() {
-		if (battlefield != null) return battlefield;
-		
-		return battlefield = new Battlefield();
 	}
 	
 	public Unit getUnit(int x, int y) {

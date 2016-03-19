@@ -29,4 +29,12 @@ public class Server extends Node {
 		
 	}
 
+	public long getDeltaTime() {
+		return deltaTime;
+	}
+
+	public void updateDeltaTime(long deltaTime) {
+		this.deltaTime += deltaTime;
+	}
+
 }
