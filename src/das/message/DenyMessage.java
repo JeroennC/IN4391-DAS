@@ -1,6 +1,4 @@
 package das.message;
-import java.rmi.RemoteException;
-
 import das.Client;
 import das.Node_RMI;
 import das.Server;
@@ -10,7 +8,7 @@ public class DenyMessage extends Message {
 	private static final long serialVersionUID = 2271377239141868250L;
 	private int deniedMessage_id;
 
-	public DenyMessage(Server from, String to_id, int deniedMessage_id) throws RemoteException {
+	public DenyMessage(Server from, String to_id, int deniedMessage_id) {
 		super(from, to_id);
 		this.setDeniedMessage_id(deniedMessage_id);
 	}

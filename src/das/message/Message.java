@@ -12,10 +12,9 @@ import das.Node;
 import das.Node_RMI;
 import das.Server;
 
-public abstract class Message extends UnicastRemoteObject implements Serializable {
+public abstract class Message implements Serializable {
 	private static final long serialVersionUID = 5970408991964088527L;
 	public static final int FWD_COUNT = 3;
-	public static final int port = 1003;
 	
 	private int message_id;
 	private final Node_RMI from;
@@ -25,15 +24,15 @@ public abstract class Message extends UnicastRemoteObject implements Serializabl
 	private Message[] messageTail;
 	
 	
-	public Message(Client from, int to_id) throws RemoteException {
+	public Message(Client from, int to_id) {
 		this(from, getComponent("Server_"+to_id), "Server_"+to_id);
 	}
 	
-	public Message(Server from, String to_id) throws RemoteException {
+	public Message(Server from, String to_id)  {
 		this(from, getComponent(to_id), to_id);
 	}
 	
-	public Message(Node from, Node_RMI to, String id) throws RemoteException {
+	public Message(Node from, Node_RMI to, String id) {
 		super();
 		this.from = from;
 		this.receiver = to;
@@ -70,7 +69,7 @@ public abstract class Message extends UnicastRemoteObject implements Serializabl
 	public static Node_RMI getComponent(String name){
 		try {
 			//TODO take into account that not every node is at localhost
-			return (Node_RMI) java.rmi.Naming.lookup("rmi://localhost:"+port+"/"+name);
+			return (Node_RMI) java.rmi.Naming.lookup("rmi://localhost:"+das.Main.port+"/"+name);
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
 			e.printStackTrace();
 			return null;

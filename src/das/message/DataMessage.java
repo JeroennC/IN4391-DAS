@@ -1,6 +1,4 @@
 package das.message;
-import java.rmi.RemoteException;
-
 import das.Client;
 import das.Node_RMI;
 import das.Server;
@@ -12,7 +10,7 @@ public class DataMessage extends Message {
 	private int datamessage_id;
 	private int actionMessage_id;
 
-	public DataMessage(Server from, String to_id, Data d, int actionMessage_id, int datamessage_id) throws RemoteException {
+	public DataMessage(Server from, String to_id, Data d, int actionMessage_id, int datamessage_id) {
 		super(from, to_id);
 		this.setData(d);
 		this.actionMessage_id = actionMessage_id;

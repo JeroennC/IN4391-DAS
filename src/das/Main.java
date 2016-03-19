@@ -8,7 +8,7 @@ import java.util.List;
 
 public class Main {
 	private static Registry registry;
-	private static int port = 1103;
+	public static int port = 1103;
 	
 	public static void main(String[] args) {		
 		setRegistry();

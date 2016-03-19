@@ -19,17 +19,19 @@ import das.message.RetransmitMessage;
 public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;
 	
+	//TODO which variables are volatile?
 	private int server_id;
-	private boolean _canMove = false;
+	private volatile boolean _canMove = false;
 	private Thread pulseTimer;
 	private List<Message> sentMessages;
 	private List<DataMessage> dataMessageBuffer;
 	private List<ActionMessage> sentActionMessages;
 	private int lastMessageSentID = 0;
 	private int expectedDataMessageID = 0;
+	private int expectedMessageID = 0;
 	private enum State { Disconnected, Initialization, Running, Exit };
 	
-	private State state;
+	private volatile State state;
 	private List<Unit> units;
 	private Unit player;
 	
@@ -119,18 +121,18 @@ public class Client extends Node {
 	
 	public void connect() {
 		server_id = (int) (Math.random() * Server.addresses.length);
-		try {
-			sendMessage(new ConnectMessage(this, server_id));
-		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		sendMessage(new ConnectMessage(this, server_id));
 		resetPulseTimer();
 	}
 
 	@Override
-	public void receiveMessage(Message m) throws RemoteException {
+	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
+		if (m.getID() != expectedDataMessageID) {
+			//TODO You could also set a timer for this to wait a little longer before requesting retransmision
+			//TODO request all messages between first and expected
+			sendMessage(new RetransmitMessage(this, server_id, expectedMessageID, m.getID() - 1));
+		}
 		m.receive(this);		
 	}
 	
@@ -142,22 +144,9 @@ public class Client extends Node {
 		if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
 		pulseTimer = (new Thread() {
 			public void run() {
-				try {
-					Thread.sleep(2 * Server.PULSE);
-				} catch (InterruptedException e) {
-					return;
-				}
-				try {
-					sendMessage(new PingMessage(Client.this, server_id));
-				} catch (RemoteException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				try {
-					Thread.sleep(3 * Server.PULSE);
-				} catch (InterruptedException e) {
-					return;
-				}
+				try { Thread.sleep(2 * Server.PULSE); } catch (InterruptedException e) { return; }
+				sendMessage(new PingMessage(Client.this, server_id));
+				try { Thread.sleep(3 * Server.PULSE); } catch (InterruptedException e) { return; }
 				connect();
 			}
 		});
@@ -173,18 +162,7 @@ public class Client extends Node {
 		dataMessageBuffer.add(m);
 		Collections.sort(dataMessageBuffer, 
 				(DataMessage m1, DataMessage m2) -> m1.getDatamessage_id() - m2.getDatamessage_id());
-		DataMessage firstMessage = dataMessageBuffer.get(0);
-		
-		if (firstMessage.getDatamessage_id() != expectedDataMessageID) {
-			//TODO YOu could also set a timer for this to wait a little longer before requesting retransmision
-			//TODO request all messages between first and expected
-			try {
-				sendMessage(new RetransmitMessage(this, server_id, expectedDataMessageID));
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+			
 		while (!dataMessageBuffer.isEmpty() && dataMessageBuffer.get(0).getDatamessage_id() == expectedDataMessageID) {
 			deliverData(dataMessageBuffer.remove(0));
 			expectedDataMessageID++;
@@ -192,6 +170,7 @@ public class Client extends Node {
 	}
 	
 	public void deliverData(DataMessage m) {
+		//TODO update Battlefield (do not forget synchronization)
 		for(Unit u_new: m.getData().getUpdatedUnits()) {
 			boolean exists = false;
 			for(Unit u_old: units) {

@@ -1,6 +1,4 @@
 package das.message;
-import java.rmi.RemoteException;
-
 import das.Client;
 import das.Node_RMI;
 
@@ -8,11 +6,13 @@ import das.Node_RMI;
 public class RetransmitMessage extends Message {
 	private static final long serialVersionUID = 345879987762306922L;
 	
-	private int retransmit_id;
+	private int firstMessage_id;
+	private int lastMessage_id;
 	
-	public RetransmitMessage(Client from, int to_id, int message_id) throws RemoteException {
+	public RetransmitMessage(Client from, int to_id, int firstMessage_id, int lastMessage_id) {
 		super(from, to_id);
-		this.retransmit_id = message_id;
+		this.firstMessage_id = firstMessage_id;
+		this.lastMessage_id = lastMessage_id;
 	}
 
 	@Override
