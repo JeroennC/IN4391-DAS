@@ -21,14 +21,14 @@ public class Client extends Node {
 	
 	//TODO which variables are volatile?
 	private int server_id;
-	private volatile boolean _canMove = false;
+	private volatile boolean _canMove;
 	private Thread pulseTimer;
 	private List<Message> sentMessages;
 	private List<DataMessage> dataMessageBuffer;
 	private List<ActionMessage> sentActionMessages;
-	private int lastMessageSentID = 0;
-	private int expectedDataMessageID = 0;
-	private int expectedMessageID = 0;
+	private int lastMessageSentID;
+	private int expectedDataMessageID;
+	private int expectedMessageID;
 	private enum State { Disconnected, Initialization, Running, Exit };
 	
 	private volatile State state;
@@ -37,26 +37,44 @@ public class Client extends Node {
 	
 	public Client(int id) throws RemoteException {
 		super(id, "Client_"+id);
-		state = State.Disconnected;
-		sentMessages = new LinkedList<Message>();
 		sentActionMessages = new LinkedList<ActionMessage>();
 		//List<Unit> units = new ArrayList<Unit>();
+		reset();
+	}
+	
+	public void reset() {
+		if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
+		pulseTimer = null;
+		_canMove = false;
+		state = State.Disconnected;
+		sentMessages = new LinkedList<Message>();
 		dataMessageBuffer = new LinkedList<DataMessage>();
+		expectedDataMessageID = 0;
+		expectedMessageID = 0;
+		lastMessageSentID = 0;
 	}
 
 	@Override
 	public void run() {
-		// TODO Connect to server
+		//Sleep so that not all clients start at the same moment.
+		try {Thread.sleep((int) (Math.random() * 2000));} catch (InterruptedException e) {}
+		
+		/*connect(); When server implementation is finished for no do */ _canMove = true; state = State.Running;
+		
 		// TODO Initialize battlefield
-		_canMove = true;
-		state = State.Running;
 		// Start main loop
-		while(state == State.Running) {
-			if(_canMove) {
+		while(state != State.Exit) {
+			if(state == State.Disconnected) {
+				//Do nothing
+			} else if(state == State.Initialization) {
+				for(ActionMessage m: sentActionMessages)
+					sendMessage(m);
+				state = State.Running;
+			} else if(state == State.Running && _canMove) {
 				System.out.print("Client doing move: ");
 				doMove();
 				System.out.print("\n");
-			}
+			} 
 			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
 		}
@@ -120,6 +138,7 @@ public class Client extends Node {
 	}
 	
 	public void connect() {
+		reset();
 		server_id = (int) (Math.random() * Server.addresses.length);
 		sendMessage(new ConnectMessage(this, server_id));
 		resetPulseTimer();
@@ -170,6 +189,8 @@ public class Client extends Node {
 	}
 	
 	public void deliverData(DataMessage m) {
+		if(state == State.Disconnected)
+			state = State.Initialization;
 		//TODO update Battlefield (do not forget synchronization)
 		for(Unit u_new: m.getData().getUpdatedUnits()) {
 			boolean exists = false;
