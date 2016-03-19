@@ -5,11 +5,13 @@ import java.util.Set;
 
 import das.Battlefield;
 import das.Client;
+import das.Main;
 import das.Unit;
 
 public class TestClient {
 
 	public static void main(String[] args) {
+		Main.setRegistry();
 		
 		// Initialize battlefield
 		Battlefield bf = Battlefield.getBattlefield();
@@ -25,7 +27,12 @@ public class TestClient {
 		
 		// Start the client
 		Client client;
-		client = new Client();
+		try {
+			client = new Client(0);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+			return;
+		}
 		Unit player = new Unit();
 		player.setX(10);
 		player.setY(10);

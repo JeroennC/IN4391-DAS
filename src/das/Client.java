@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
-import java.util.Timer;
 
 import das.message.ActionMessage;
 import das.message.ConnectMessage;
@@ -18,10 +16,9 @@ import das.message.PulseMessage;
 import das.message.RetransmitMessage;
 
 
-public class Client implements Node_RMI, Runnable {
+public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;
 	
-	private int id;
 	private int server_id;
 	private boolean _canMove = false;
 	private Thread pulseTimer;
@@ -36,8 +33,8 @@ public class Client implements Node_RMI, Runnable {
 	private List<Unit> units;
 	private Unit player;
 	
-	public Client() {
-		super();
+	public Client(int id) throws RemoteException {
+		super(id, "Client_"+id);
 		state = State.Disconnected;
 		sentMessages = new LinkedList<Message>();
 		sentActionMessages = new LinkedList<ActionMessage>();
@@ -63,6 +60,7 @@ public class Client implements Node_RMI, Runnable {
 		}
 		// TODO Disconnect
 		System.out.println("Game is over.");
+		close();
 	}
 	
 	// Synchronized on battlefield so other threads don't mess things up
@@ -219,16 +217,6 @@ public class Client implements Node_RMI, Runnable {
 			sentMessages.remove(0);
 		sentMessages.add(m);
 		m.send();
-	}
-
-	@Override
-	public int getID() {
-		return id;		
-	}
-	
-	@Override
-	public String getName() {
-		return "Client_"+id;		
 	}
 	
 	public void setPlayer(Unit player) {

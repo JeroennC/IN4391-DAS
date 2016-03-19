@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Queue;
 
 import das.Client;
+import das.Node;
 import das.Node_RMI;
 import das.Server;
 
@@ -32,18 +33,11 @@ public abstract class Message extends UnicastRemoteObject implements Serializabl
 		this(from, getComponent(to_id), to_id);
 	}
 	
-	public Message(Node_RMI from, Node_RMI to, String id) throws RemoteException {
+	public Message(Node from, Node_RMI to, String id) throws RemoteException {
 		super();
 		this.from = from;
 		this.receiver = to;
-		String fromName;
-		try {
-			fromName = from.getName();
-		} catch (RemoteException e) {
-			fromName = "ERROR";
-			e.printStackTrace();
-		}
-		this.from_id = fromName;
+		this.from_id = from.getName();
 		this.receiver_id = id;		
 	}
 	
