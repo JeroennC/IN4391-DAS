@@ -32,7 +32,6 @@ public class Client extends Node {
 	private enum State { Disconnected, Initialization, Running, Exit };
 	
 	private volatile State state;
-	private List<Unit> units;
 	private Battlefield bf;
 	private Unit player;
 	
@@ -191,21 +190,18 @@ public class Client extends Node {
 	public void deliverData(DataMessage m) {
 		if(state == State.Disconnected)
 			state = State.Initialization;
-		//TODO update Battlefield (do not forget synchronization)
-		for(Unit u_new: m.getData().getUpdatedUnits()) {
-			boolean exists = false;
-			for(Unit u_old: units) {
-				if(u_new.equals(u_old)) {
+		synchronized(bf) {
+			for(Unit u_new: m.getData().getUpdatedUnits()) {
+				Unit u_old = bf.getUnit(u_new);
+				if (u_old != null ) {
 					u_old.setHp(u_new.getHp());
 					u_old.setX(u_new.getX());
 					u_old.setY(u_new.getY());
-					exists = true;
+				} else {
+					bf.placeUnit(u_new);
+					if(u_new.equals(m.getData().getPlayer()))
+						player = u_new;
 				}
-			}
-			if(!exists) {
-				units.add(u_new);
-				if(u_new.equals(m.getData().getPlayer()))
-					player = u_new;
 			}
 		}
 	}

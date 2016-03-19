@@ -1,5 +1,6 @@
 package das;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -7,10 +8,12 @@ public class Battlefield {
 	public static final int MAP_WIDTH = 25;
 	public static final int MAP_HEIGHT = 25;
 	private Unit[][] map;
+	private List<Unit> unitList;
 	private int dragonCount;
 	
 	public Battlefield() {
 		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
+		unitList = new ArrayList<Unit>();
 		dragonCount = 0;
 	}
 	
@@ -18,9 +21,19 @@ public class Battlefield {
 		return map[x][y];
 	}
 	
+	public Unit getUnit(Unit unit) {
+		Unit result = null;
+		for (Unit u : unitList) {
+			if (u.equals(unit))
+				result = u;
+		}
+		return result;
+	}
+	
 	public void placeUnit(Unit u) {
 		map[u.getX()][u.getY()] = u;
 		if (!u.isType()) dragonCount++;
+		unitList.add(u);
 	}
 	
 	public boolean moveUnit(Unit unit, MoveType move) {
@@ -72,6 +85,7 @@ public class Battlefield {
 	public void killUnit(Unit unit) {
 		map[unit.getX()][unit.getY()] = null;
 		if (!unit.isType()) dragonCount--;
+		unitList.removeIf(u -> u.equals(unit));
 		
 		// TODO how does a server get this message to the clients?
 	}
