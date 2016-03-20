@@ -22,12 +22,11 @@ public class Battlefield {
 	}
 	
 	public Unit getUnit(Unit unit) {
-		Unit result = null;
 		for (Unit u : unitList) {
 			if (u.equals(unit))
-				result = u;
+				return u;
 		}
-		return result;
+		return null;
 	}
 	
 	public void placeUnit(Unit u) {
