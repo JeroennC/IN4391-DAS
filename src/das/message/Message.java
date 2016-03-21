@@ -3,9 +3,7 @@ import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
-import java.util.Queue;
 
 import das.Client;
 import das.Node;
@@ -17,7 +15,7 @@ public abstract class Message implements Serializable {
 	public static final int FWD_COUNT = 3;
 	
 	private int message_id;
-	private final Node_RMI from;
+	private transient final Node from;
 	private final Node_RMI receiver;
 	private final String from_id;
 	private final String receiver_id;
@@ -90,5 +88,11 @@ public abstract class Message implements Serializable {
 	public String getFrom_id() {
 		return from_id;
 	}
+	
+	public String getReceiver_id() {
+		return receiver_id;
+	}
+	
+	
 
 }

@@ -2,6 +2,7 @@ package das;
 
 import java.util.List;
 
+import das.message.ActionMessage;
 import das.message.Message;
 
 public class ServerState implements Runnable {
@@ -29,6 +30,11 @@ public class ServerState implements Runnable {
 		
 	}
 	
+	public boolean isPossible(Action action) {
+		//TODO Auto-generated method stub
+		return false;
+	}
+	
 	public void rollback() {}
 	
 	public long getTime() {
@@ -49,5 +55,10 @@ public class ServerState implements Runnable {
 
 	public void setSlowerState(ServerState slowerState) {
 		this.slowerState = slowerState;
+	}
+
+	public void deliver(Message m) {
+		// TODO Auto-generated method stub
+		inbox.add(m);
 	}
 }

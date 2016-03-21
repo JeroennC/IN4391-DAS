@@ -2,6 +2,7 @@ package das.message;
 import das.Action;
 import das.Client;
 import das.Node_RMI;
+import das.Server;
 
 
 public class ActionMessage extends Message {
@@ -15,9 +16,11 @@ public class ActionMessage extends Message {
 
 	@Override
 	public void receive(Node_RMI node) {
-		//((Server) node).doSomething(action);
+		((Server) node).receiveActionMessage(this);
 	}
 
-
+	public Action getAction() {
+		return action;
+	}
 
 }
