@@ -22,6 +22,7 @@ public abstract class Message implements Serializable {
 	private final String from_id;
 	private final String receiver_id;
 	private Message[] messageTail;
+	private long timestamp;
 	
 	
 	public Message(Client from, int to_id) {
@@ -41,6 +42,8 @@ public abstract class Message implements Serializable {
 	}
 	
 	public void send() {
+		if(from instanceof Server)
+			setTimestamp(((Server) from).getTime());
 		new Thread() {
 			  public void run() { 
 				  try {
@@ -74,6 +77,18 @@ public abstract class Message implements Serializable {
 			e.printStackTrace();
 			return null;
 		}
+	}
+
+	public long getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+	}
+
+	public String getFrom_id() {
+		return from_id;
 	}
 
 }

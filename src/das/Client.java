@@ -197,6 +197,7 @@ public class Client extends Node {
 					u_old.setHp(u_new.getHp());
 					u_old.setX(u_new.getX());
 					u_old.setY(u_new.getY());
+					//TODO move unit on battleField
 				} else {
 					bf.placeUnit(u_new);
 					if(u_new.equals(m.getData().getPlayer()))

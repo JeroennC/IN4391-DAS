@@ -8,17 +8,14 @@ public class ServerState implements Runnable {
 	private Server server;
 	private Battlefield bf;
 	private final long delay;
-	private ServerState fasterState;
-	private ServerState slowerState;
+	private ServerState fasterState = null;
+	private ServerState slowerState = null;
 	private List<Message> inbox;
 	
-	public ServerState(Server server, long delay, ServerState fasterState,
-			ServerState slowerState) {
+	public ServerState(Server server, long delay) {
 		super();
 		this.server = server;
 		this.delay = delay;
-		this.fasterState = fasterState;
-		this.slowerState = slowerState;
 		bf = new Battlefield();
 	}
 	
@@ -36,5 +33,21 @@ public class ServerState implements Runnable {
 	
 	public long getTime() {
 		return System.currentTimeMillis() + server.getDeltaTime() + delay;
+	}
+
+	public ServerState getFasterState() {
+		return fasterState;
+	}
+
+	public void setFasterState(ServerState fasterState) {
+		this.fasterState = fasterState;
+	}
+
+	public ServerState getSlowerState() {
+		return slowerState;
+	}
+
+	public void setSlowerState(ServerState slowerState) {
+		this.slowerState = slowerState;
 	}
 }
