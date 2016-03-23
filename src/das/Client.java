@@ -185,10 +185,8 @@ public class Client extends Node {
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
 				if (u_old != null ) {
-					u_old.setHp(u_new.getHp());
-					u_old.setX(u_new.getX());
-					u_old.setY(u_new.getY());
-					//TODO move unit on battleField
+					bf.updateUnit(u_old, u_new);
+					// TODO this method does not change things if overlapping happens. Should we catch this?
 				} else {
 					bf.placeUnit(u_new);
 					if(u_new.equals(m.getData().getPlayer()))

@@ -29,6 +29,19 @@ public class Battlefield {
 		return null;
 	}
 	
+	public boolean updateUnit(Unit u_old, Unit u_new) {
+		if (isOccupied(u_new.getX(), u_new.getY())) {
+			return false;
+		} else {
+			map[u_old.getX()][u_old.getY()] = null;
+			u_old.setHp(u_new.getHp());
+			u_old.setX(u_new.getX());
+			u_old.setY(u_new.getY());
+			map[u_old.getX()][u_old.getY()] = u_old;
+			return true;
+		}
+	}
+	
 	public void placeUnit(Unit u) {
 		map[u.getX()][u.getY()] = u;
 		if (!u.isType()) dragonCount++;
