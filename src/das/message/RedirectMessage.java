@@ -2,12 +2,13 @@ package das.message;
 
 import das.Client;
 import das.Node_RMI;
+import das.Server;
 
 public class RedirectMessage extends Message {
 	private static final long serialVersionUID = 6021654018838732614L;
 	private int server_id;
 	
-	public RedirectMessage(Client from, int to_id, int server_id) {
+	public RedirectMessage(Server from, String to_id, int server_id) {
 		super(from, to_id);
 		this.setServer_id(server_id);
 	}

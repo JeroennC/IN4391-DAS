@@ -16,11 +16,16 @@ public class Server extends Node {
 	private long deltaTime;
 	private Map<String, Integer> lastMessageSentID;
 	private Map<String, Integer> lastDataMessageSentID;
+	private Map<String, Integer> serverLoad;
+	
+	private enum State { Disconnected, Initialization, Running, Inconsistent, Exit };
+	private volatile State state;
 	
 	private ServerState[] trailingStates;
 	
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
+		state = State.Disconnected;
 		trailingStates = new ServerState[TSS_DELAYS.length];
 		for(int i=0; i<trailingStates.length;i++) {
 			trailingStates[i] = new ServerState(this, TSS_DELAYS[i]);
@@ -29,11 +34,16 @@ public class Server extends Node {
 		}
 		lastMessageSentID = new HashMap<String, Integer>();
 		lastDataMessageSentID = new HashMap<String, Integer>();
+		serverLoad = new HashMap<String, Integer>();
+		serverLoad.put(getName(), 0);
 	}
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		
+		while(state != State.Exit) {
+			
+		}
 		
 	}
 	
@@ -57,6 +67,7 @@ public class Server extends Node {
 	
 	public void receiveConnectMessage(ConnectMessage m) {
 		//TODO return address of least loaded server
+		sendMessage(new RedirectMessage(this, m.getFrom_id(), this.id));
 	}
 	
 	public void receiveInitMessage(InitMessage m) {
@@ -65,6 +76,16 @@ public class Server extends Node {
 		//TODO gather data in data object from trailingStates[0]
 		Data d = new Data();
 		sendMessage(new DataMessage(this, m.getFrom_id(), d, 0, 0));
+	}
+	
+	public void receiveServerUpdateMessage(ServerUpdateMessage m) {
+		serverLoad.put(m.getFrom_id(), m.getServerLoad());		
+	}
+	
+	public void receiveNewServerMessage(NewServerMessage m) {
+		serverLoad.put(m.getFrom_id(), 0);
+		lastMessageSentID.put(m.getFrom_id(), 0);
+		//TODO How to guide the server initiliaztion flow? Contact all servers, or contact one server? And load balancing? Directly or smoothly?
 	}
 
 	@Override
@@ -102,5 +123,4 @@ public class Server extends Node {
 		lastMessageSentID.put(m.getReceiver_id() + 1, m_id);
 		m.send();
 	}
-
 }
