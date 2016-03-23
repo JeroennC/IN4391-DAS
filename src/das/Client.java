@@ -1,20 +1,10 @@
 package das;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import das.message.ActionMessage;
-import das.message.ConnectMessage;
-import das.message.DataMessage;
-import das.message.DenyMessage;
-import das.message.Message;
-import das.message.PingMessage;
-import das.message.PulseMessage;
-import das.message.RetransmitMessage;
-
+import das.message.*;
 
 public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;
@@ -42,7 +32,7 @@ public class Client extends Node {
 		reset();
 	}
 	
-	public void reset() {
+	public synchronized void reset() {
 		if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
 		pulseTimer = null;
 		_canMove = false;
@@ -66,10 +56,6 @@ public class Client extends Node {
 		while(state != State.Exit) {
 			if(state == State.Disconnected) {
 				//Do nothing
-			} else if(state == State.Initialization) {
-				for(ActionMessage m: sentActionMessages)
-					sendMessage(m);
-				state = State.Running;
 			} else if(state == State.Running && _canMove) {
 				System.out.print("Client doing move: ");
 				doMove();
@@ -147,8 +133,7 @@ public class Client extends Node {
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
 		if (m.getID() != expectedDataMessageID) {
-			//TODO You could also set a timer for this to wait a little longer before requesting retransmision
-			//TODO request all messages between first and expected
+			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
 			sendMessage(new RetransmitMessage(this, server_id, expectedMessageID, m.getID() - 1));
 		}
 		m.receive(this);		
@@ -175,6 +160,14 @@ public class Client extends Node {
 		sentActionMessages.removeIf(n -> n.getID() == m.getDeniedMessage_id());
 	}
 	
+	public void receiveRedirectMessage(RedirectMessage m) {
+		if(state == State.Running)
+			reset();
+		server_id = m.getServer_id();
+		state = State.Initialization;
+		sendMessage(new InitMessage(this, server_id));
+	}
+	
 	public void receiveData(DataMessage m) {
 		sentActionMessages.removeIf(n -> n.getID() == m.getActionMessage_id());
 		dataMessageBuffer.add(m);
@@ -188,8 +181,6 @@ public class Client extends Node {
 	}
 	
 	public void deliverData(DataMessage m) {
-		if(state == State.Disconnected)
-			state = State.Initialization;
 		synchronized(bf) {
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
@@ -204,6 +195,11 @@ public class Client extends Node {
 						player = u_new;
 				}
 			}
+		}
+		if(state == State.Initialization) {
+			for(ActionMessage am: sentActionMessages)
+				sendMessage(am);
+			state = State.Running;
 		}
 	}
 	

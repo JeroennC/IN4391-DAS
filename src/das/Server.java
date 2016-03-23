@@ -56,6 +56,10 @@ public class Server extends Node {
 	}
 	
 	public void receiveConnectMessage(ConnectMessage m) {
+		//TODO return address of least loaded server
+	}
+	
+	public void receiveInitMessage(InitMessage m) {
 		lastMessageSentID.put(m.getFrom_id(), 0);
 		lastDataMessageSentID.put(m.getFrom_id(), 0);
 		//TODO gather data in data object from trailingStates[0]
