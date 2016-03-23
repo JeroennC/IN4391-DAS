@@ -57,6 +57,7 @@ public class Server extends Node {
 	
 	public void receiveConnectMessage(ConnectMessage m) {
 		//TODO return address of least loaded server
+		sendMessage(new RedirectMessage(this, m.getFrom_id(), this.id));
 	}
 	
 	public void receiveInitMessage(InitMessage m) {
