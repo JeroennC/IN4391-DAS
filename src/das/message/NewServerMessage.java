@@ -12,8 +12,7 @@ public class NewServerMessage extends Message {
 
 	@Override
 	public void receive(Node_RMI node) {
-		// TODO Auto-generated method stub
-
+		((Server) node).receiveNewServerMessage(this);
 	}
 
 }
