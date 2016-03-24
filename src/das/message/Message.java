@@ -93,6 +93,8 @@ public abstract class Message implements Serializable {
 		return receiver_id;
 	}
 	
-	
+	public Node getFrom() {
+		return from;
+	}
 
 }

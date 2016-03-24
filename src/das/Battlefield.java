@@ -3,20 +3,99 @@ package das;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 import das.action.*;
 
 public class Battlefield {
 	public static final int MAP_WIDTH = 25;
 	public static final int MAP_HEIGHT = 25;
+	private static final int INITIAL_DRAGON_COUNT = 20;
 	private Unit[][] map;
 	private List<Unit> unitList;
 	private int dragonCount;
+	private int highestUnitId;
 	
 	public Battlefield() {
 		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
 		unitList = new ArrayList<Unit>();
 		dragonCount = 0;
+		highestUnitId = 0;
+	}
+	
+	public void initialize() {
+		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
+		unitList = new ArrayList<Unit>();
+		dragonCount = 0;
+		highestUnitId = 0;
+		
+		// Place dragons
+		Random rand = new Random(System.nanoTime());
+		for (int i = 0; i < INITIAL_DRAGON_COUNT; i++) {
+			int hp = rand.nextInt(51) + 50;
+			int ap = rand.nextInt(16) + 5;
+			// 20 tries of placement
+			for (int j = 0; j < 20; j++ ){
+				int x = rand.nextInt(MAP_WIDTH);
+				int y = rand.nextInt(MAP_HEIGHT);
+				if (isOccupied(x, y)) continue;
+				
+				placeUnit(new Unit(highestUnitId++, x, y, hp, ap, false));
+				break;
+			}
+			// If still not placed, put it in the first available from rand point
+			int x = rand.nextInt(MAP_WIDTH);
+			int y = rand.nextInt(MAP_HEIGHT);
+			while (true) {
+				if (!isOccupied(x,y)) {
+					placeUnit(new Unit(highestUnitId++, x, y, hp, ap, false));
+					break;
+				}
+				x++;
+				if (x > MAP_WIDTH - 1) {
+					x = 0;
+					y++;
+					if (y > MAP_HEIGHT - 1)
+						y = 0;
+				}
+			}
+		}
+	}
+	
+	public Unit createAndPlaceNewPlayer() {
+		// TODO Check if board is not full?
+		Random rand = new Random(System.nanoTime());
+		Unit u;
+		int hp = rand.nextInt(11) + 10;
+		int ap = rand.nextInt(10) + 1;
+		// 20 tries of placement
+		for (int j = 0; j < 20; j++ ){
+			int x = rand.nextInt(MAP_WIDTH);
+			int y = rand.nextInt(MAP_HEIGHT);
+			if (isOccupied(x, y)) continue;
+			
+			u = new Unit(highestUnitId++, x, y, hp, ap, true);
+			placeUnit(u);
+			break;
+		}
+		// If still not placed, put it in the first available from rand point
+		int x = rand.nextInt(MAP_WIDTH);
+		int y = rand.nextInt(MAP_HEIGHT);
+		while (true) {
+			if (!isOccupied(x,y)) {
+				u = new Unit(highestUnitId++, x, y, hp, ap, true);
+				placeUnit(u);
+				break;
+			}
+			x++;
+			if (x > MAP_WIDTH - 1) {
+				x = 0;
+				y++;
+				if (y > MAP_HEIGHT - 1)
+					y = 0;
+			}
+		}
+		return u;
 	}
 	
 	public Unit getUnit(int x, int y) {
@@ -53,6 +132,10 @@ public class Battlefield {
 		map[u.getX()][u.getY()] = u;
 		if (!u.isType()) dragonCount++;
 		unitList.add(u);
+		
+		if (u.getId() > highestUnitId) {
+			highestUnitId = u.getId() + 1;
+		}
 	}
 	
 	public boolean moveUnit(Unit unit, MoveType move) {
@@ -212,9 +295,19 @@ public class Battlefield {
 			// Must be opposite types, not dead
 			if (dest.isAlive() && (dest.isType() ^ unit.isType())) return true;
 			return false;
+		} else if (action instanceof NewPlayer) {
+			return getUnit(action.getExecuterId()) == null;
 		}
 		
 		return false;
+	}
+	
+	public List<Unit> getUnitList() {
+		List<Unit> result = new ArrayList<Unit>();
+		this.unitList.forEach(unit -> {
+			result.add(unit.clone());
+		});
+		return result;
 	}
 	
 	public Battlefield clone() {
@@ -225,5 +318,9 @@ public class Battlefield {
 		});
 		
 		return bf;
+	}
+	
+	public int getNextUnitId() {
+		return highestUnitId;
 	}
 }

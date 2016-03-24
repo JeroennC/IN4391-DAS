@@ -1,12 +1,16 @@
 package das.testbench;
 
 import java.rmi.RemoteException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import das.Battlefield;
 import das.Client;
 import das.Main;
 import das.Unit;
+import das.message.Data;
+import das.message.DataMessage;
 
 public class TestClient {
 
@@ -14,7 +18,7 @@ public class TestClient {
 		Main.setRegistry();
 		
 		// Initialize battlefield
-		Battlefield bf = Battlefield.getBattlefield();
+		Battlefield bf = new Battlefield();
 		Unit dragon = new Unit();
 		dragon.setX(5);
 		dragon.setY(5);
@@ -43,6 +47,15 @@ public class TestClient {
 		player.setType(true);
 		client.setPlayer(player);
 		bf.placeUnit(player);
+		
+		List<Unit> updateUnits = new LinkedList<Unit>();
+		updateUnits.add(dragon);
+		updateUnits.add(dragon);
+		Data data = new Data();
+		data.setUpdatedUnits(updateUnits);
+		data.setPlayer(player);
+		DataMessage msg = new DataMessage(null, "Client_1",  data,  1, 1 );
+		client.sendMessage(msg);
 		
 		new Thread(client).start();
 		

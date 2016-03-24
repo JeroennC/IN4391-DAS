@@ -1,12 +1,12 @@
 package das;
 
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
 
 import das.action.Action;
-
-import das.message.Message;
+import das.message.ActionMessage;
 
 public class ServerState implements Runnable {
 	private Server server;
@@ -14,7 +14,7 @@ public class ServerState implements Runnable {
 	private final long delay;
 	private ServerState fasterState = null;
 	private ServerState slowerState = null;
-	private Queue<Message> inbox;
+	private Queue<ActionMessage> inbox;
 	private volatile State state;
 	private enum State {Start, Running, Inconsistent, Exit};
 	private Thread runningThread;
@@ -25,11 +25,12 @@ public class ServerState implements Runnable {
 		this.delay = delay;
 		bf = new Battlefield();
 		this.state = State.Start;
-		inbox = new PriorityQueue<Message>(0, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+		inbox = new PriorityQueue<ActionMessage>(1, (ActionMessage m1, ActionMessage m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
 	}
 	
 	public void init(Battlefield battlefield) {
-		//TODO copy battlefield (not reference copy, but deep object copy)
+		// Deep object copy, new clone of battlefield
+		this.bf = battlefield.clone();
 	}
 	
 	@Override
@@ -38,7 +39,7 @@ public class ServerState implements Runnable {
 		state = State.Running;
 		while(state != State.Exit) {
 			Thread.interrupted();
-			Message firstMessage = null;
+			ActionMessage firstMessage = null;
 			synchronized(inbox) {
 				firstMessage = inbox.peek();
 			}
@@ -56,7 +57,7 @@ public class ServerState implements Runnable {
 		}			
 	}
 	
-	public void deliver(Message m) {
+	public void deliver(ActionMessage m) {
 		
 	}
 	
@@ -91,10 +92,18 @@ public class ServerState implements Runnable {
 		this.slowerState = slowerState;
 	}
 
-	public void receive(Message m) {
+	public void receive(ActionMessage m) {
 		synchronized(inbox) {		
 			inbox.add(m);
 		}
 		runningThread.interrupt();
+	}
+	
+	public List<Unit> getUnitList() {
+		return bf.getUnitList();
+	}
+	
+	public int getNextUnitId() {
+		return bf.getNextUnitId();
 	}
 }

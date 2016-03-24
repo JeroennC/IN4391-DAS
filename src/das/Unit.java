@@ -14,8 +14,20 @@ public class Unit implements Serializable {
 	private int maxHp;
 	private boolean alive = true;
 	
-	//TODO subclasses for dragon and player
+	// true if human, false if dragon
 	private boolean type;
+	
+	public Unit() { }
+	
+	public Unit(int id, int x, int y, int hp, int ap, boolean type) {
+		this.id = id;
+		this.x = x;
+		this.y = y;
+		this.hp = hp;
+		this.ap = ap;
+		this.maxHp = hp;
+		this.type = type;
+	}
 	
 	@Override
 	public int hashCode() {
@@ -77,8 +89,20 @@ public class Unit implements Serializable {
 	public boolean isType() {
 		return type;
 	}
+	public boolean isHuman() {
+		return type;
+	}
+	public boolean isDragon() {
+		return !type;
+	}
 	public void setType(boolean type) {
 		this.type = type;
+	}
+	public void setHuman(boolean human) {
+		this.type = human;
+	}
+	public void setDragon(boolean dragon) {
+		this.type = !dragon;
 	}
 	public boolean isAlive() {
 		return alive;
@@ -89,9 +113,11 @@ public class Unit implements Serializable {
 	public void setId(int id) {
 		this.id = id;
 	}
+	public int distanceTo(int x, int y) {
+		return Math.abs(this.x - x) + Math.abs(this.y - y);
+	}
 	public boolean canReach(Unit other) {
-		return Math.abs(this.x - other.x) + Math.abs(this.y - other.y) 
-			<= reachDistance;
+		return distanceTo(other.x, other.y) <= reachDistance;
 	}
 	public boolean needsHealing() {
 		return hp * 1.0 / maxHp < 0.5;

@@ -11,15 +11,25 @@ import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class Main {
+	private static class NodeRef {
+		public Thread thread;
+		public Node node;
+		
+		public NodeRef(Thread thread, Node node) {
+			this.thread = thread;
+			this.node = node;
+		}
+	}
+	
 	private static Registry registry;
 	public static int port = 1103;
-	private static List<Thread> threads;
+	private static List<NodeRef> nodes;
 	
 	public static void main(String[] args) {		
 		setRegistry();
 		
 		// Initialize
-		threads = new ArrayList<Thread>();
+		nodes = new ArrayList<NodeRef>();
 		// Read from input
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		String input;
@@ -32,8 +42,8 @@ public class Main {
 					// Process input
 					if(sep[0].equals("start")) {
 						int id = Integer.parseInt(sep[2]);
-						if (sep[1].equals("client") || sep[1].equals("server")) {
-							if (isIdActive(sep[1], id))
+						if (sep[1].equals("Client") || sep[1].equals("Server")) {
+							if (!isIdActive(sep[1], id))
 								startThread(sep[1], id);
 							else
 								System.out.println(sep[1] + ", id " + id +" already taken.");
@@ -42,6 +52,9 @@ public class Main {
 						int id = Integer.parseInt(sep[2]);
 						if (isIdActive(sep[1], id))
 							killThread(sep[1], id);
+					} else if (sep[0].equals("sleep")){
+						int time = Integer.parseInt(sep[1]);
+						Thread.sleep(time);
 					} else if (sep[0].equals("exit")) {
 						System.out.println("System exiting..");
 						killRunningThreads();
@@ -52,6 +65,7 @@ public class Main {
 				} catch (Exception e) {
 					// If array out of bounds or other exceptions happen
 					System.out.println("Error on input: '" + input + "'");
+					e.printStackTrace();
 				}
 			}
 		} catch (IOException e) {
@@ -64,8 +78,8 @@ public class Main {
 	 */
 	private static boolean isIdActive(String type, int id) {
 		String threadName = type + "_" + id;
-		for (Thread t : threads) {
-			if (t.getName().equals(threadName))
+		for (NodeRef nr : nodes) {
+			if (nr.thread.getName().equals(threadName))
 			{
 				return true;
 			}
@@ -78,14 +92,15 @@ public class Main {
 	 * @throws RemoteException 
 	 */
 	private static void startThread(String type, int id) throws RemoteException {
-		Thread t;
-		if (type.equals("client")) {
-			t = new Thread(new Client(id));
+		Node n;
+		if (type.equals("Client")) {
+			n = new Client(id);
 		} else { // Server
-			t = new Thread(new Server(id));
+			n = new Server(id);
 		}
+		Thread t = new Thread(n);
 		t.setName(type + "_" + id);
-		threads.add(t);
+		nodes.add(new NodeRef(t, n));
 		t.start();
 	}
 	
@@ -94,11 +109,12 @@ public class Main {
 	 */
 	private static void killThread(String type, int id) {
 		String threadName = type + "_" + id;
-		for (Thread t : threads) {
-			if (t.getName().equals(threadName))
+		for (NodeRef nr : nodes) {
+			if (nr.thread.getName().equals(threadName))
 			{
-				t.interrupt();
-				threads.remove(t);
+				nr.node.stop();
+				//nr.thread.interrupt();
+				nodes.remove(nr);
 				break;
 			}
 		}
@@ -108,10 +124,11 @@ public class Main {
 	 * Kill all running threads
 	 */
 	private static void killRunningThreads() {
-		threads.forEach(t -> {
-			t.interrupt();
+		nodes.forEach(nr -> {
+			nr.node.stop();
+			//nr.thread.interrupt();
 		});
-		threads.clear();
+		nodes.clear();
 	}
 	
 	

@@ -20,16 +20,13 @@ public class Client extends Node {
 	private int lastMessageSentID;
 	private int expectedDataMessageID;
 	private int expectedMessageID;
-	private enum State { Disconnected, Initialization, Running, Exit };
 	
-	private volatile State state;
 	private Battlefield bf;
 	private Unit player;
 	
 	public Client(int id) throws RemoteException {
 		super(id, "Client_"+id);
 		sentActionMessages = new LinkedList<ActionMessage>();
-		//List<Unit> units = new ArrayList<Unit>();
 		reset();
 	}
 	

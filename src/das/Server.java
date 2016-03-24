@@ -3,6 +3,7 @@ import java.rmi.RemoteException;
 import java.util.HashMap;
 import java.util.Map;
 
+import das.action.NewPlayer;
 import das.message.*;
 
 
@@ -17,9 +18,6 @@ public class Server extends Node {
 	private Map<String, Integer> lastMessageSentID;
 	private Map<String, Integer> lastDataMessageSentID;
 	private Map<String, Integer> serverLoad;
-	
-	private enum State { Disconnected, Initialization, Running, Inconsistent, Exit };
-	private volatile State state;
 	
 	private ServerState[] trailingStates;
 	
@@ -45,6 +43,7 @@ public class Server extends Node {
 			
 		}
 		
+		close();
 	}
 	
 	public void receiveActionMessage(ActionMessage m) {
@@ -73,8 +72,26 @@ public class Server extends Node {
 	public void receiveInitMessage(InitMessage m) {
 		lastMessageSentID.put(m.getFrom_id(), 0);
 		lastDataMessageSentID.put(m.getFrom_id(), 0);
-		//TODO gather data in data object from trailingStates[0]
 		Data d = new Data();
+		// Create new player
+		int playerId = trailingStates[0].getNextUnitId();
+		ActionMessage newPlayer = new ActionMessage((Client)m.getFrom(), this.id, new NewPlayer(playerId));
+		newPlayer.setTimestamp(this.getTime());
+		for(ServerState ss: trailingStates)
+			ss.receive(newPlayer);
+		// Wait to ensure player exists in unit list
+		try { Thread.sleep(500); } catch (InterruptedException e) { }
+		// Gather data in data object from trailingStates[0]
+		d.setUpdatedUnits(trailingStates[0].getUnitList());
+		// Get player
+		Unit player = null;
+		for (Unit unit : d.getUpdatedUnits()) {
+			if (unit.getId() == playerId) {
+				player = unit;
+				break;
+			}
+		}
+		d.setPlayer(player);
 		sendMessage(new DataMessage(this, m.getFrom_id(), d, 0, 0));
 	}
 	
