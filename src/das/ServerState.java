@@ -41,14 +41,15 @@ public class ServerState implements Runnable {
 			}
 			if(firstMessage == null) {
 				try { Thread.sleep(1000); } catch (InterruptedException e) { continue; }
-			} else if(firstMessage.getTimestamp() >= getTime() ) {
+			} else if(firstMessage.getTimestamp() <= getTime() ) {
 				deliver(firstMessage);
 				synchronized(inbox) {
 					inbox.remove(firstMessage);
+					//TODO add to other list
 				}
 			} else {
 				try { Thread.sleep(firstMessage.getTimestamp() - getTime()); } catch (InterruptedException e) { continue; }
-			}			
+			}	
 		}			
 	}
 	
