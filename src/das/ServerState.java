@@ -34,6 +34,11 @@ public class ServerState implements Runnable {
 		return bf.isActionAllowed(action);
 	}
 	
+	public boolean isConsistent(StateCommand cmd) {
+		// TODO could be more sophisticated, is now very strict
+		return cmd.getCommandNr() == cmd.getPreviousCommand().getCommandNr();
+	}
+	
 	public void rollback() {}
 	
 	public long getTime() {
