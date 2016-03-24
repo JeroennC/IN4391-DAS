@@ -220,11 +220,8 @@ public class Battlefield {
 	public Battlefield clone() {
 		Battlefield bf = new Battlefield();
 		
-		bf.dragonCount = this.dragonCount;
 		this.unitList.forEach(unit -> {
-			Unit newUnit = unit.clone();
-			bf.unitList.add(newUnit);
-			bf.map[newUnit.getX()][newUnit.getY()] = newUnit;
+			bf.placeUnit(unit.clone());
 		});
 		
 		return bf;
