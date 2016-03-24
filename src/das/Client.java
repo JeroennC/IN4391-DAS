@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import das.action.MoveType;
 import das.message.*;
 
 public class Client extends Node {

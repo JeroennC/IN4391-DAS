@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import das.action.*;
+
 public class Battlefield {
 	public static final int MAP_WIDTH = 25;
 	public static final int MAP_HEIGHT = 25;
@@ -24,6 +26,14 @@ public class Battlefield {
 	public Unit getUnit(Unit unit) {
 		for (Unit u : unitList) {
 			if (u.equals(unit))
+				return u;
+		}
+		return null;
+	}
+	
+	public Unit getUnit(int unit_id) {
+		for (Unit u : unitList) {
+			if (u.equals(unit_id))
 				return u;
 		}
 		return null;
@@ -157,5 +167,53 @@ public class Battlefield {
 		}
 		
 		return null;
+	}
+	
+	public boolean isActionAllowed(Action action) {
+		// Get unit
+		Unit unit = getUnit(action.getExecuterId());
+		if (!unit.isAlive()) return false;
+		
+		if (action instanceof Move) {
+			// Dragons can't move
+			if (!unit.isType()) return false;
+			
+			Move move = (Move)action;
+			int destX = unit.getX();
+			int destY = unit.getY();
+			switch (move.getMoveType()) {
+				case Left:
+					destX--;
+					break;
+				case Right:
+					destX++;
+					break;
+				case Up:
+					destY++;
+					break;
+				case Down:
+					destY--;
+					break;
+			}
+			// Check if move allowed
+			if (!inBounds(destX, destY) || isOccupied(destX, destY)) return false;
+			return true;
+		} else if (action instanceof Heal) {
+			// Dragons can't heal
+			if (!unit.isType()) return false;
+			
+			Heal heal = (Heal)action;
+			Unit dest = getUnit(heal.getReceiverId());
+			if (dest.isAlive() && dest.isType() && unit.canReach(dest)) return true;
+			return false;
+		} else if (action instanceof Hit) {
+			Hit hit = (Hit)action;
+			Unit dest = getUnit(hit.getReceiverId());
+			// Must be opposite types, not dead
+			if (dest.isAlive() && (dest.isType() ^ unit.isType())) return true;
+			return false;
+		}
+		
+		return false;
 	}
 }

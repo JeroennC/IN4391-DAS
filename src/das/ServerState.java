@@ -2,7 +2,7 @@ package das;
 
 import java.util.List;
 
-import das.message.ActionMessage;
+import das.action.Action;
 import das.message.Message;
 
 public class ServerState implements Runnable {
@@ -31,8 +31,7 @@ public class ServerState implements Runnable {
 	}
 	
 	public boolean isPossible(Action action) {
-		//TODO Auto-generated method stub
-		return false;
+		return bf.isActionAllowed(action);
 	}
 	
 	public void rollback() {}
