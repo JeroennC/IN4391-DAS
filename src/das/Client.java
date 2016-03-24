@@ -186,7 +186,6 @@ public class Client extends Node {
 				Unit u_old = bf.getUnit(u_new);
 				if (u_old != null ) {
 					bf.updateUnit(u_old, u_new);
-					// TODO this method does not change things if overlapping happens. Should we catch this?
 				} else {
 					bf.placeUnit(u_new);
 					if(u_new.equals(m.getData().getPlayer()))
