@@ -10,8 +10,8 @@ public class DataMessage extends Message {
 	private int datamessage_id;
 	private int actionMessage_id;
 
-	public DataMessage(Server from, String to_id, Data d, int actionMessage_id, int datamessage_id) {
-		super(from, to_id);
+	public DataMessage(Server from, Address to, String to_id, Data d, int actionMessage_id, int datamessage_id) {
+		super(from, to, to_id);
 		this.setData(d);
 		this.actionMessage_id = actionMessage_id;
 		this.datamessage_id = datamessage_id;

@@ -73,7 +73,7 @@ public class ServerState implements Runnable {
 	public void rollback() {}
 	
 	public long getTime() {
-		return System.currentTimeMillis() + server.getDeltaTime() + delay;
+		return server.getTime() + delay;
 	}
 
 	public ServerState getFasterState() {

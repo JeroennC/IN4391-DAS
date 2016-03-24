@@ -6,8 +6,8 @@ import das.Node_RMI;
 public class ConnectMessage extends Message {
 	private static final long serialVersionUID = 5205567105382587637L;
 
-	public ConnectMessage(Client from, int to_id) {
-		super(from, to_id);
+	public ConnectMessage(Client from, Address to, int to_id) {
+		super(from, to, to_id);
 	}
 
 	@Override

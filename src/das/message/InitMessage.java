@@ -7,8 +7,8 @@ import das.Server;
 public class InitMessage extends Message {
 	private static final long serialVersionUID = -2554610299918794996L;
 
-	public InitMessage(Client from, int to_id ) {
-		super(from, to_id);
+	public InitMessage(Client from, Address to, int to_id ) {
+		super(from, to, to_id);
 	}
 
 	@Override

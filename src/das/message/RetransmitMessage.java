@@ -9,8 +9,8 @@ public class RetransmitMessage extends Message {
 	private int firstMessage_id;
 	private int lastMessage_id;
 	
-	public RetransmitMessage(Client from, int to_id, int firstMessage_id, int lastMessage_id) {
-		super(from, to_id);
+	public RetransmitMessage(Client from, Address to, int to_id, int firstMessage_id, int lastMessage_id) {
+		super(from, to, to_id);
 		this.firstMessage_id = firstMessage_id;
 		this.lastMessage_id = lastMessage_id;
 	}
