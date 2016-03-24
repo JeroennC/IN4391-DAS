@@ -1,6 +1,10 @@
 package das.message;
 
-public class Address {
+import java.io.Serializable;
+
+public class Address implements Serializable {
+	private static final long serialVersionUID = 3983271924100172349L;
+	
 	String address;
 	int port;
 	

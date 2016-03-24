@@ -40,15 +40,20 @@ public abstract class Message implements Serializable {
 		this.fromAddress = from.getAddress();
 		this.receiver_id = id;		
 	}
-	
+		
 	public void send() {
 		if(from instanceof Server)
 			setTimestamp(((Server) from).getTime());
+		if(receiver == null)
+			return;
+		System.out.println("Sendmessage "+this);
 		new Thread() {
 			  public void run() { 
 				  try {
 					receiver.receiveMessage(Message.this);
-				} catch (RemoteException e) { } //Do nothing (simulate Time-out)
+				} catch (RemoteException e) { 
+					e.printStackTrace();
+				} //Do nothing (simulate Time-out)
 			  }
 		}.start();
 	}
@@ -62,17 +67,15 @@ public abstract class Message implements Serializable {
 	}
 	
 	public void addTail(List<Message> list) {
-		messageTail = (Message[]) list.toArray();
+		messageTail = (Message[]) list.toArray(new Message[list.size()]);
 	}
 	
 	public abstract void receive(Node_RMI node);
 	
 	public static Node_RMI getComponent(Address address, String name){
 		try {
-			//TODO take into account that not every node is at localhost
 			return (Node_RMI) java.rmi.Naming.lookup("rmi://"+address.getAddress()+":"+address.getPort()+"/"+name);
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
-			e.printStackTrace();
 			return null;
 		}
 	}

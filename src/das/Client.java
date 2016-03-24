@@ -14,7 +14,7 @@ public class Client extends Node {
 	private int server_id;
 	private Address serverAddress;
 	private volatile boolean _canMove;
-	private Thread pulseTimer;
+	private volatile Thread pulseTimer;
 	private List<Message> sentMessages;
 	private List<DataMessage> dataMessageBuffer;
 	private List<ActionMessage> sentActionMessages;
@@ -28,14 +28,15 @@ public class Client extends Node {
 	public Client(int id) throws RemoteException {
 		super(id, "Client_"+id);
 		sentActionMessages = new LinkedList<ActionMessage>();
+		bf = new Battlefield();
 		reset();
 	}
 	
 	public synchronized void reset() {
 		if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
-		pulseTimer = null;
+		pulseTimer = new Thread();
 		_canMove = false;
-		state = State.Disconnected;
+		changeState(State.Disconnected);
 		sentMessages = new LinkedList<Message>();
 		dataMessageBuffer = new LinkedList<DataMessage>();
 		expectedDataMessageID = 0;
@@ -48,7 +49,7 @@ public class Client extends Node {
 		//Sleep so that not all clients start at the same moment.
 		try {Thread.sleep((int) (Math.random() * 2000));} catch (InterruptedException e) {}
 		
-		/*connect(); When server implementation is finished for no do */ _canMove = true; state = State.Running;
+		connect();
 		
 		// TODO Initialize battlefield
 		// Start main loop
@@ -74,7 +75,7 @@ public class Client extends Node {
 			if(!bf.hasDragons() || !player.isAlive()) {
 				// Game is over, change client state
 				System.out.print("Game over");
-				state = State.Exit;
+				changeState(State.Exit);
 				return;
 			}
 			List<Unit> nearUnits = bf.getSurroundingUnits(player);
@@ -125,6 +126,7 @@ public class Client extends Node {
 		reset();
 		server_id = (int) (Math.random() * Server.ADDRESSES.length);
 		serverAddress = Server.ADDRESSES[server_id];
+		System.out.println("Try to connect with server "+(server_id));
 		sendMessage(new ConnectMessage(this, serverAddress, server_id));
 		resetPulseTimer();
 	}
@@ -144,16 +146,20 @@ public class Client extends Node {
 	}
 	
 	private void resetPulseTimer() {
-		if(pulseTimer != null && pulseTimer.isAlive()) pulseTimer.interrupt();
-		pulseTimer = (new Thread() {
-			public void run() {
-				try { Thread.sleep(2 * Server.PULSE); } catch (InterruptedException e) { return; }
-				sendMessage(new PingMessage(Client.this, serverAddress, server_id));
-				try { Thread.sleep(3 * Server.PULSE); } catch (InterruptedException e) { return; }
-				connect();
-			}
-		});
-		pulseTimer.start();
+		synchronized(pulseTimer) {
+			if(pulseTimer != null && pulseTimer.isAlive()) pulseTimer.interrupt();
+			pulseTimer = (new Thread() {
+				public void run() {
+					try { Thread.sleep(2 * Server.PULSE); } catch (InterruptedException e) { return; }
+					if(!interrupted()) sendMessage(new PingMessage(Client.this, serverAddress, server_id));
+					else return;
+					try { Thread.sleep(3 * Server.PULSE); } catch (InterruptedException e) { return; }
+					if(!interrupted()) connect();
+					else return;
+				}
+			});
+			pulseTimer.start();
+		}
 	}
 	
 	public void receiveDenial(DenyMessage m) {
@@ -163,9 +169,10 @@ public class Client extends Node {
 	public void receiveRedirectMessage(RedirectMessage m) {
 		if(state == State.Running)
 			reset();
+		System.out.println("Change server id from "+server_id +" to "+m.getServer_id());
 		server_id = m.getServer_id();
 		serverAddress = Server.ADDRESSES[server_id];
-		state = State.Initialization;
+		changeState(State.Initialization);
 		sendMessage(new InitMessage(this, serverAddress, server_id));
 	}
 	
@@ -197,14 +204,14 @@ public class Client extends Node {
 		if(state == State.Initialization) {
 			for(ActionMessage am: sentActionMessages)
 				sendMessage(am);
-			state = State.Running;
+			changeState(State.Running);
 		}
 	}
 	
 	public synchronized void sendMessage(Message m) {
 		m.setID(lastMessageSentID++);
 		m.addTail(sentMessages);
-		if(sentMessages.size() < Message.FWD_COUNT)
+		if(sentMessages.size() >= Message.FWD_COUNT)
 			sentMessages.remove(0);
 		sentMessages.add(m);
 		m.send();

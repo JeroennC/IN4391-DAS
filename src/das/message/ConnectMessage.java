@@ -1,5 +1,6 @@
 package das.message;
 import das.Client;
+import das.Server;
 import das.Node_RMI;
 
 
@@ -12,7 +13,7 @@ public class ConnectMessage extends Message {
 
 	@Override
 	public void receive(Node_RMI node) {
-		// TODO Auto-generated method stub
+		((Server) node).receiveConnectMessage(this);
 
 	}
 

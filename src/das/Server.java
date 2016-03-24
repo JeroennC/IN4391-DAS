@@ -13,16 +13,15 @@ import das.message.*;
 public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
 	public static final Address[] ADDRESSES = {
-		new Address("localhost", 1003),
-		new Address("localhost", 1003),
-		new Address("localhost", 1003),
-		new Address("localhost", 1003),
-		new Address("localhost", 1003),
+		new Address("localhost", Main.port),
+		new Address("localhost", Main.port),
+		new Address("localhost", Main.port),
+		new Address("localhost", Main.port),
+		new Address("localhost", Main.port),
 		}; //TODO temporal solution, Addresses can also be read from a file
 	public static final int PULSE = 1000;//ms
 	private static final int[] TSS_DELAYS = {0, 200, 500, 1000, 10000};
 	
-	private int id;
 	private long deltaTime;
 	private Map<String, Integer> lastMessageSentID;
 	private Map<String, Integer> lastDataMessageSentID;
@@ -65,15 +64,19 @@ public class Server extends Node {
 	
 	private void connect() {
 		for(int i=0;i<ADDRESSES.length;i++)
-			sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
+			if(id != i)
+				sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
 		
 		for(int i=0; i<20 && !unacknowledgedMessages.isEmpty(); i++) {
 			try { Thread.sleep(100); } catch (InterruptedException e) { }
 		}
-		//TODO changestate to initializing
-		if(unacknowledgedMessages.size() == ADDRESSES.length)
-			;//TODO Only server, start initializing
-		else {
+		changeState(State.Initialization);
+		if(unacknowledgedMessages.size() == ADDRESSES.length-1) {
+			Battlefield bf = new Battlefield();
+			bf.initialize();
+			for(ServerState ss: trailingStates)
+				ss.init(bf);
+		} else {
 			int copyServerId = ((int)(Math.random() * Integer.MAX_VALUE)) % serverAddresses.size();
 			String serverName = (String) serverAddresses.keySet().toArray()[copyServerId];
 			Address a = serverAddresses.get(serverName);
@@ -113,10 +116,9 @@ public class Server extends Node {
 		Data d = new Data();
 		// Create new player
 		int playerId = trailingStates[0].getNextUnitId();
-		ActionMessage newPlayer = new ActionMessage((Client)m.getFrom(), clientAddresses.get(m.getFrom_id()), this.id, new NewPlayer(playerId));
-		newPlayer.setTimestamp(this.getTime());
-		for(ServerState ss: trailingStates)
-			ss.receive(newPlayer);
+		//TODO Create ActionMessage without using m.getFrom(), for this gives an exception because m.getFrom is a RMI object
+		//ActionMessage newPlayer = new ActionMessage((Client)m.getFrom(), clientAddresses.get(m.getFrom_id()), this.id, new NewPlayer(playerId));
+		//try { receiveMessage(newPlayer); } catch (RemoteException e1) {	}
 		// Wait to ensure player exists in unit list
 		try { Thread.sleep(500); } catch (InterruptedException e) { }
 		// Gather data in data object from trailingStates[0]
@@ -153,6 +155,7 @@ public class Server extends Node {
 
 	@Override
 	public void receiveMessage(Message m) throws RemoteException {
+		System.out.println(getName()+": receive message: "+m.toString());
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
 			if(!(m instanceof NewServerMessage))

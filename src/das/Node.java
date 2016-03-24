@@ -11,8 +11,8 @@ import das.message.Address;
 public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runnable {
 	private static final long serialVersionUID = -3510258906366116527L;
 	
-	private int id;
-	private String name;
+	protected int id;
+	protected String name;
 	
 	protected enum State { Disconnected, Initialization, Running, Inconsistent, Exit };
 	protected volatile State state;
@@ -36,6 +36,7 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 		if (state != State.Exit) {
 			state = newState;
 		}
+		System.out.println(getName()+": change state to "+newState);
 	}
 	
 	public void stop() {
