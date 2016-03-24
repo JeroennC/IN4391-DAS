@@ -12,6 +12,7 @@ public class Client extends Node {
 	
 	//TODO which variables are volatile?
 	private int server_id;
+	private Address serverAddress;
 	private volatile boolean _canMove;
 	private Thread pulseTimer;
 	private List<Message> sentMessages;
@@ -125,8 +126,9 @@ public class Client extends Node {
 	
 	public void connect() {
 		reset();
-		server_id = (int) (Math.random() * Server.addresses.length);
-		sendMessage(new ConnectMessage(this, server_id));
+		server_id = (int) (Math.random() * Server.ADDRESSES.length);
+		serverAddress = Server.ADDRESSES[server_id];
+		sendMessage(new ConnectMessage(this, serverAddress, server_id));
 		resetPulseTimer();
 	}
 
@@ -135,7 +137,7 @@ public class Client extends Node {
 		resetPulseTimer();
 		if (m.getID() != expectedDataMessageID) {
 			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
-			sendMessage(new RetransmitMessage(this, server_id, expectedMessageID, m.getID() - 1));
+			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedMessageID, m.getID() - 1));
 		}
 		m.receive(this);		
 	}
@@ -149,7 +151,7 @@ public class Client extends Node {
 		pulseTimer = (new Thread() {
 			public void run() {
 				try { Thread.sleep(2 * Server.PULSE); } catch (InterruptedException e) { return; }
-				sendMessage(new PingMessage(Client.this, server_id));
+				sendMessage(new PingMessage(Client.this, serverAddress, server_id));
 				try { Thread.sleep(3 * Server.PULSE); } catch (InterruptedException e) { return; }
 				connect();
 			}
@@ -165,8 +167,9 @@ public class Client extends Node {
 		if(state == State.Running)
 			reset();
 		server_id = m.getServer_id();
+		serverAddress = Server.ADDRESSES[server_id];
 		state = State.Initialization;
-		sendMessage(new InitMessage(this, server_id));
+		sendMessage(new InitMessage(this, serverAddress, server_id));
 	}
 	
 	public void receiveData(DataMessage m) {

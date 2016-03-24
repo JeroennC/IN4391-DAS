@@ -8,8 +8,8 @@ public class DenyMessage extends Message {
 	private static final long serialVersionUID = 2271377239141868250L;
 	private int deniedMessage_id;
 
-	public DenyMessage(Server from, String to_id, int deniedMessage_id) {
-		super(from, to_id);
+	public DenyMessage(Server from, Address to,  String to_id, int deniedMessage_id) {
+		super(from, to, to_id);
 		this.setDeniedMessage_id(deniedMessage_id);
 	}
 

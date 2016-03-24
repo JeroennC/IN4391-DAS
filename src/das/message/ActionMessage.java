@@ -9,8 +9,8 @@ public class ActionMessage extends Message {
 	private static final long serialVersionUID = 3743633525735683045L;
 	private Action action;
 	
-	public ActionMessage(Client from, int to, Action a) {
-		super(from, to);
+	public ActionMessage(Client from, Address to, int to_id, Action a) {
+		super(from, to, to_id);
 		this.action = a;
 	}
 

@@ -16,19 +16,20 @@ public abstract class Message implements Serializable {
 	
 	private int message_id;
 	private transient final Node from;
+	private Address fromAddress;
 	private final Node_RMI receiver;
 	private final String from_id;
 	private final String receiver_id;
 	private Message[] messageTail;
 	private long timestamp;
+	private List<Integer> acks;	
 	
-	
-	public Message(Client from, int to_id) {
-		this(from, getComponent("Server_"+to_id), "Server_"+to_id);
+	public Message(Client from, Address to, int to_id) {
+		this(from, getComponent(to, "Server_"+to_id), "Server_"+to_id);
 	}
 	
-	public Message(Server from, String to_id)  {
-		this(from, getComponent(to_id), to_id);
+	public Message(Node from, Address to, String to_id)  {
+		this(from, getComponent(to, to_id), to_id);
 	}
 	
 	public Message(Node from, Node_RMI to, String id) {
@@ -36,6 +37,7 @@ public abstract class Message implements Serializable {
 		this.from = from;
 		this.receiver = to;
 		this.from_id = from.getName();
+		this.fromAddress = from.getAddress();
 		this.receiver_id = id;		
 	}
 	
@@ -46,9 +48,7 @@ public abstract class Message implements Serializable {
 			  public void run() { 
 				  try {
 					receiver.receiveMessage(Message.this);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
+				} catch (RemoteException e) { } //Do nothing (simulate Time-out)
 			  }
 		}.start();
 	}
@@ -67,10 +67,10 @@ public abstract class Message implements Serializable {
 	
 	public abstract void receive(Node_RMI node);
 	
-	public static Node_RMI getComponent(String name){
+	public static Node_RMI getComponent(Address address, String name){
 		try {
 			//TODO take into account that not every node is at localhost
-			return (Node_RMI) java.rmi.Naming.lookup("rmi://localhost:"+das.Main.port+"/"+name);
+			return (Node_RMI) java.rmi.Naming.lookup("rmi://"+address.getAddress()+":"+address.getPort()+"/"+name);
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
 			e.printStackTrace();
 			return null;
@@ -92,7 +92,17 @@ public abstract class Message implements Serializable {
 	public String getReceiver_id() {
 		return receiver_id;
 	}
-	
-	
+
+	public Address getFromAddress() {
+		return fromAddress;
+	}
+
+	public List<Integer> getAcks() {
+		return acks;
+	}
+
+	public void setAcks(List<Integer> acks) {
+		this.acks = acks;
+	}
 
 }

@@ -1,6 +1,9 @@
 package das;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import das.message.*;
@@ -8,7 +11,13 @@ import das.message.*;
 
 public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
-	public static final String[] addresses = {"localhost", "localhost", "localhost", "localhost", "localhost"};
+	public static final Address[] ADDRESSES = {
+		new Address("localhost", 1003),
+		new Address("localhost", 1003),
+		new Address("localhost", 1003),
+		new Address("localhost", 1003),
+		new Address("localhost", 1003),
+		}; //TODO temporal solution, Addresses can also be read from a file
 	public static final int PULSE = 1000;//ms
 	private static final int[] TSS_DELAYS = {0, 200, 500, 1000, 10000};
 	
@@ -16,7 +25,11 @@ public class Server extends Node {
 	private long deltaTime;
 	private Map<String, Integer> lastMessageSentID;
 	private Map<String, Integer> lastDataMessageSentID;
+	private Map<String, List<Integer>> acks;
 	private Map<String, Integer> serverLoad;
+	private Map<String, Address> clientAddresses;
+	private Map<String, Address> serverAddresses;
+	private List<Message> unacknowledgedMessages;
 	
 	private enum State { Disconnected, Initialization, Running, Inconsistent, Exit };
 	private volatile State state;
@@ -35,16 +48,38 @@ public class Server extends Node {
 		lastMessageSentID = new HashMap<String, Integer>();
 		lastDataMessageSentID = new HashMap<String, Integer>();
 		serverLoad = new HashMap<String, Integer>();
+		clientAddresses = new HashMap<String, Address>();
+		serverAddresses = new HashMap<String, Address>();
 		serverLoad.put(getName(), 0);
+		unacknowledgedMessages = new LinkedList<Message>();
+		acks = new HashMap<String, List<Integer>>();
 	}
 
 	@Override
 	public void run() {
-		
+		connect();
 		while(state != State.Exit) {
 			
 		}
 		
+	}
+	
+	private void connect() {
+		for(int i=0;i<ADDRESSES.length;i++)
+			sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
+		
+		for(int i=0; i<20 && !unacknowledgedMessages.isEmpty(); i++) {
+			try { Thread.sleep(100); } catch (InterruptedException e) { }
+		}
+		//TODO changestate to initializing
+		if(unacknowledgedMessages.size() == ADDRESSES.length)
+			;//TODO Only server, start initializing
+		else {
+			int copyServerId = ((int)(Math.random() * Integer.MAX_VALUE)) % serverAddresses.size();
+			String serverName = (String) serverAddresses.keySet().toArray()[copyServerId];
+			Address a = serverAddresses.get(serverName);
+			sendMessage(new InitServerMessage(this, a, serverName));
+		}
 	}
 	
 	public void receiveActionMessage(ActionMessage m) {
@@ -53,7 +88,7 @@ public class Server extends Node {
 				ss.receive(m);
 			//TODO send DataMessage back to Client. Here or from first tss?
 		} else {
-			sendMessage(new DenyMessage(this, m.getFrom_id(), m.getID()));
+			sendMessage(new DenyMessage(this, clientAddresses.get(m.getFrom_id()), m.getFrom_id(), m.getID()));
 		}
 	}
 	
@@ -62,12 +97,15 @@ public class Server extends Node {
 	}
 	
 	public void receivePingMessage(PingMessage m) {
-		sendMessage(new PulseMessage(this, m.getFrom_id()));
+		if(m.getFrom_id().startsWith("Client"))
+			sendMessage(new PulseMessage(this, clientAddresses.get(m.getFrom_id()), m.getFrom_id()));
+		else
+			sendMessage(new ServerUpdateMessage(this, serverAddresses.get(m.getFrom_id()), m.getFrom_id()));
 	}
 	
 	public void receiveConnectMessage(ConnectMessage m) {
 		//TODO return address of least loaded server
-		sendMessage(new RedirectMessage(this, m.getFrom_id(), this.id));
+		sendMessage(new RedirectMessage(this, clientAddresses.get(m.getFrom_id()), m.getFrom_id(), this.id));
 	}
 	
 	public void receiveInitMessage(InitMessage m) {
@@ -75,7 +113,7 @@ public class Server extends Node {
 		lastDataMessageSentID.put(m.getFrom_id(), 0);
 		//TODO gather data in data object from trailingStates[0]
 		Data d = new Data();
-		sendMessage(new DataMessage(this, m.getFrom_id(), d, 0, 0));
+		sendMessage(new DataMessage(this, clientAddresses.get(m.getFrom_id()), m.getFrom_id(), d, 0, 0));
 	}
 	
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {
@@ -85,16 +123,30 @@ public class Server extends Node {
 	public void receiveNewServerMessage(NewServerMessage m) {
 		serverLoad.put(m.getFrom_id(), 0);
 		lastMessageSentID.put(m.getFrom_id(), 0);
-		//TODO How to guide the server initiliaztion flow? Contact all servers, or contact one server? And load balancing? Directly or smoothly?
+		synchronized(acks) {
+			List<Integer> ackList = new ArrayList<Integer>();
+			ackList.add(m.getID());
+			acks.put(m.getFrom_id(), ackList);
+		}
+	}
+	
+	public void receiveInitServerMessage(InitServerMessage initServerMessage) {
+		// send data to server		
 	}
 
 	@Override
 	public void receiveMessage(Message m) throws RemoteException {
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
-		if(m.getFrom_id().startsWith("Server") && !(m instanceof NewServerMessage)) 
-			updateTimer(m);
-		if(m.getFrom_id().startsWith("Client")) {
+		if(m.getFrom_id().startsWith("Server")) {
+			if(!(m instanceof NewServerMessage))
+				updateTimer(m);
+			serverAddresses.put(m.getFrom_id(), m.getFromAddress());
+			synchronized(acks) {
+				if(acks.containsKey(m.getFrom_id())) acks.get(m.getFrom_id()).add(m.getID());
+			}
+		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
+			clientAddresses.put(m.getFrom_id(), m.getFromAddress());
 		}
 		m.receive(this);		
 	}
@@ -118,9 +170,20 @@ public class Server extends Node {
 	}
 	
 	public synchronized void sendMessage(Message m) {
-		int m_id = lastMessageSentID.get(m.getReceiver_id()); 
+		int m_id = lastMessageSentID.containsKey(m.getReceiver_id()) ? lastMessageSentID.get(m.getReceiver_id()) : 0; 
 		m.setID(m_id);
-		lastMessageSentID.put(m.getReceiver_id() + 1, m_id);
+		lastMessageSentID.put(m.getReceiver_id(), m_id + 1);
+		if(m.getReceiver_id().startsWith("Server"))
+			unacknowledgedMessages.add(m);
+		synchronized(acks) {
+			List<Integer> a;
+			if(acks.containsKey(m.getReceiver_id())) {
+				 a = new ArrayList<Integer>(acks.get(m.getReceiver_id()));
+				acks.get(m.getReceiver_id()).clear();
+			} else
+				a = new ArrayList<Integer>();
+			m.setAcks(a);
+		}
 		m.send();
 	}
 }

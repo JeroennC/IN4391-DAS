@@ -1,8 +1,12 @@
 package das;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+
+import das.message.Address;
 
 public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runnable {
 	private static final long serialVersionUID = -3510258906366116527L;
@@ -40,4 +44,12 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 	public void setName(String name) {
 		this.name = name;
 	}	
+	
+	public Address getAddress() {
+		try {
+			return new Address (InetAddress.getLocalHost().getHostAddress(), Main.port);
+		} catch (UnknownHostException e) {
+			return null;
+		}
+	}
 }
