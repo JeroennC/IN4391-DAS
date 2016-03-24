@@ -3,6 +3,9 @@ package das;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
+
+import das.action.Action;
+
 import das.message.Message;
 
 public class ServerState implements Runnable {
@@ -58,8 +61,7 @@ public class ServerState implements Runnable {
 	}
 	
 	public boolean isPossible(Action action) {
-		//TODO Auto-generated method stub
-		return false;
+		return bf.isActionAllowed(action);
 	}
 	
 	public void rollback() {}

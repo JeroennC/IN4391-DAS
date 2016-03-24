@@ -30,6 +30,8 @@ public class Unit implements Serializable {
 			return true;
 		if (obj == null)
 			return false;
+		if (obj instanceof Integer)
+			return id == (int)obj;
 		if (getClass() != obj.getClass())
 			return false;
 		Unit other = (Unit) obj;

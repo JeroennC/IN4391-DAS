@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import das.action.*;
+
 public class Battlefield {
 	public static final int MAP_WIDTH = 25;
 	public static final int MAP_HEIGHT = 25;
@@ -29,17 +31,22 @@ public class Battlefield {
 		return null;
 	}
 	
-	public boolean updateUnit(Unit u_old, Unit u_new) {
-		if (isOccupied(u_new.getX(), u_new.getY())) {
-			return false;
-		} else {
-			map[u_old.getX()][u_old.getY()] = null;
-			u_old.setHp(u_new.getHp());
-			u_old.setX(u_new.getX());
-			u_old.setY(u_new.getY());
-			map[u_old.getX()][u_old.getY()] = u_old;
-			return true;
+	public Unit getUnit(int unit_id) {
+		for (Unit u : unitList) {
+			if (u.equals(unit_id))
+				return u;
 		}
+		return null;
+	}
+	
+	public void updateUnit(Unit u_active, Unit u_new) {
+		if (map[u_active.getX()][u_active.getY()] == u_active) {
+			map[u_active.getX()][u_active.getY()] = null;
+		}
+		u_active.setHp(u_new.getHp());
+		u_active.setX(u_new.getX());
+		u_active.setY(u_new.getY());
+		map[u_active.getX()][u_active.getY()] = u_active;
 	}
 	
 	public void placeUnit(Unit u) {
@@ -160,5 +167,53 @@ public class Battlefield {
 		}
 		
 		return null;
+	}
+	
+	public boolean isActionAllowed(Action action) {
+		// Get unit
+		Unit unit = getUnit(action.getExecuterId());
+		if (!unit.isAlive()) return false;
+		
+		if (action instanceof Move) {
+			// Dragons can't move
+			if (!unit.isType()) return false;
+			
+			Move move = (Move)action;
+			int destX = unit.getX();
+			int destY = unit.getY();
+			switch (move.getMoveType()) {
+				case Left:
+					destX--;
+					break;
+				case Right:
+					destX++;
+					break;
+				case Up:
+					destY++;
+					break;
+				case Down:
+					destY--;
+					break;
+			}
+			// Check if move allowed
+			if (!inBounds(destX, destY) || isOccupied(destX, destY)) return false;
+			return true;
+		} else if (action instanceof Heal) {
+			// Dragons can't heal
+			if (!unit.isType()) return false;
+			
+			Heal heal = (Heal)action;
+			Unit dest = getUnit(heal.getReceiverId());
+			if (dest.isAlive() && dest.isType() && unit.canReach(dest)) return true;
+			return false;
+		} else if (action instanceof Hit) {
+			Hit hit = (Hit)action;
+			Unit dest = getUnit(hit.getReceiverId());
+			// Must be opposite types, not dead
+			if (dest.isAlive() && (dest.isType() ^ unit.isType())) return true;
+			return false;
+		}
+		
+		return false;
 	}
 }
