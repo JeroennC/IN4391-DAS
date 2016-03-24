@@ -107,4 +107,18 @@ public class Unit implements Serializable {
 			alive = false;
 		}
 	}
+	public Unit clone() {
+		Unit u = new Unit();
+		
+		u.alive = this.alive;
+		u.ap = this.ap;
+		u.hp = this.hp;
+		u.id = this.id;
+		u.maxHp = this.maxHp;
+		u.type = this.type;
+		u.x = this.x;
+		u.y = this.y;
+		
+		return u;
+	}
 }
