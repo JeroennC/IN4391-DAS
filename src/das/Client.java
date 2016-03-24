@@ -144,7 +144,7 @@ public class Client extends Node {
 	}
 	
 	private void resetPulseTimer() {
-		if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
+		if(pulseTimer != null && pulseTimer.isAlive()) pulseTimer.interrupt();
 		pulseTimer = (new Thread() {
 			public void run() {
 				try { Thread.sleep(2 * Server.PULSE); } catch (InterruptedException e) { return; }

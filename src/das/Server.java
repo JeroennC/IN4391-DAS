@@ -50,7 +50,7 @@ public class Server extends Node {
 	public void receiveActionMessage(ActionMessage m) {
 		if(trailingStates[0].isPossible(m.getAction())) {
 			for(ServerState ss: trailingStates)
-				ss.deliver(m);
+				ss.receive(m);
 			//TODO send DataMessage back to Client. Here or from first tss?
 		} else {
 			sendMessage(new DenyMessage(this, m.getFrom_id(), m.getID()));

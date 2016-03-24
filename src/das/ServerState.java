@@ -1,8 +1,8 @@
 package das;
 
-import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
-import das.message.ActionMessage;
 import das.message.Message;
 
 public class ServerState implements Runnable {
@@ -11,13 +11,18 @@ public class ServerState implements Runnable {
 	private final long delay;
 	private ServerState fasterState = null;
 	private ServerState slowerState = null;
-	private List<Message> inbox;
+	private Queue<Message> inbox;
+	private volatile State state;
+	private enum State {Start, Running, Inconsistent, Exit};
+	private Thread runningThread;
 	
 	public ServerState(Server server, long delay) {
 		super();
 		this.server = server;
 		this.delay = delay;
 		bf = new Battlefield();
+		this.state = State.Start;
+		inbox = new PriorityQueue<Message>(0, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
 	}
 	
 	public void init(Battlefield battlefield) {
@@ -26,7 +31,28 @@ public class ServerState implements Runnable {
 	
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		runningThread = Thread.currentThread();
+		state = State.Running;
+		while(state != State.Exit) {
+			Thread.interrupted();
+			Message firstMessage = null;
+			synchronized(inbox) {
+				firstMessage = inbox.peek();
+			}
+			if(firstMessage == null) {
+				try { Thread.sleep(1000); } catch (InterruptedException e) { continue; }
+			} else if(firstMessage.getTimestamp() >= getTime() ) {
+				deliver(firstMessage);
+				synchronized(inbox) {
+					inbox.remove(firstMessage);
+				}
+			} else {
+				try { Thread.sleep(firstMessage.getTimestamp() - getTime()); } catch (InterruptedException e) { continue; }
+			}			
+		}			
+	}
+	
+	public void deliver(Message m) {
 		
 	}
 	
@@ -57,8 +83,10 @@ public class ServerState implements Runnable {
 		this.slowerState = slowerState;
 	}
 
-	public void deliver(Message m) {
-		// TODO Auto-generated method stub
-		inbox.add(m);
+	public void receive(Message m) {
+		synchronized(inbox) {		
+			inbox.add(m);
+		}
+		runningThread.interrupt();
 	}
 }
