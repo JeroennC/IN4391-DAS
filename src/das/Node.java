@@ -35,8 +35,8 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 	public void changeState(State newState) {
 		if (state != State.Exit) {
 			state = newState;
+			Print("changed state to "+newState);
 		}
-		System.out.println(getName()+": change state to "+newState);
 	}
 	
 	public void stop() {
@@ -65,5 +65,13 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 		} catch (UnknownHostException e) {
 			return null;
 		}
+	}
+	
+	public void Print(String msg) {
+		System.out.println(getName() + ": " + msg);
+	}
+	
+	public void Printf(String msg, Object... arg1) {
+		System.out.printf(getName() + ": " + msg + "\n", arg1);
 	}
 }

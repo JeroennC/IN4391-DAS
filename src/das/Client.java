@@ -57,15 +57,14 @@ public class Client extends Node {
 			if(state == State.Disconnected) {
 				//Do nothing
 			} else if(state == State.Running && _canMove) {
-				System.out.print("Client doing move: ");
 				doMove();
-				System.out.print("\n");
 			} 
 			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
 		}
 		// TODO Disconnect
-		System.out.println("Game is over.");
+		Print("Game is over.");
+		stopPulseTimer();
 		close();
 	}
 	
@@ -74,7 +73,7 @@ public class Client extends Node {
 		synchronized(bf) {
 			if(!bf.hasDragons() || !player.isAlive()) {
 				// Game is over, change client state
-				System.out.print("Game over");
+				Print("Game over");
 				changeState(State.Exit);
 				return;
 			}
@@ -84,7 +83,7 @@ public class Client extends Node {
 			for (Unit u : nearUnits) {
 				if (u.isType() && u.needsHealing()) {
 					bf.healUnit(player, u);
-					System.out.print("Healed player " + u.getId());
+					Print("Healed player " + u.getId());
 					return;
 				}
 			}
@@ -92,7 +91,7 @@ public class Client extends Node {
 			for (Unit u : nearUnits) {
 				if (!u.isType()) {
 					bf.attackUnit(player, u);
-					System.out.printf("Attacked %d, health left: %d", u.getId(), u.getHp());
+					Printf("Attacked %d, health left: %d", u.getId(), u.getHp());
 					return;
 				}
 			}
@@ -118,7 +117,7 @@ public class Client extends Node {
 					bf.moveUnit(player, m);
 				}
 			}
-			System.out.printf("Moved to %s, now at x %d, y %d ", m.toString(), player.getX(), player.getY());
+			Printf("Moved to %s, now at x %d, y %d ", m.toString(), player.getX(), player.getY());
 		}
 	}
 	
@@ -126,7 +125,7 @@ public class Client extends Node {
 		reset();
 		server_id = (int) (Math.random() * Server.ADDRESSES.length);
 		serverAddress = Server.ADDRESSES[server_id];
-		System.out.println("Try to connect with server "+(server_id));
+		Print("Try to connect with server "+(server_id));
 		sendMessage(new ConnectMessage(this, serverAddress, server_id));
 		resetPulseTimer();
 	}
@@ -162,6 +161,12 @@ public class Client extends Node {
 		}
 	}
 	
+	private void stopPulseTimer() {
+		synchronized(pulseTimer) {
+			if(pulseTimer != null && pulseTimer.isAlive()) pulseTimer.interrupt();
+		}
+	}
+	
 	public void receiveDenial(DenyMessage m) {
 		sentActionMessages.removeIf(n -> n.getID() == m.getDeniedMessage_id());
 	}
@@ -169,7 +174,7 @@ public class Client extends Node {
 	public void receiveRedirectMessage(RedirectMessage m) {
 		if(state == State.Running)
 			reset();
-		System.out.println("Change server id from "+server_id +" to "+m.getServer_id());
+		Print("Change server id from "+server_id +" to "+m.getServer_id());
 		server_id = m.getServer_id();
 		serverAddress = Server.ADDRESSES[server_id];
 		changeState(State.Initialization);

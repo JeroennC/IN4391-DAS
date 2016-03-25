@@ -155,7 +155,7 @@ public class Server extends Node {
 
 	@Override
 	public void receiveMessage(Message m) throws RemoteException {
-		System.out.println(getName()+": receive message: "+m.toString());
+		Print("received message: "+m.toString());
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
 			if(!(m instanceof NewServerMessage))
