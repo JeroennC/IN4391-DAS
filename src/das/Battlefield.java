@@ -310,7 +310,7 @@ public class Battlefield {
 		return result;
 	}
 	
-	public Battlefield clone() {
+	public synchronized Battlefield clone() {
 		Battlefield bf = new Battlefield();
 		
 		this.unitList.forEach(unit -> {

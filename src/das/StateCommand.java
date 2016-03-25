@@ -3,9 +3,12 @@ package das;
 import das.message.ActionMessage;
 
 public class StateCommand {
-	// Points to the equivalent command in earlier executed state
+	// Points to the equivalent command in other server states
 	private StateCommand[] commands;
 	private int myPosition;
+	
+	// Defines whether this Command should still be executed
+	private boolean valid;
 	
 	// Defines the number of the command within it's own state
 	private long command_nr; 
@@ -17,6 +20,21 @@ public class StateCommand {
 		this.commands = commands;
 		this.myPosition = myPosition;
 		this.message = message;
+		valid = true;
+	}
+	
+	public synchronized void Invalidate() {
+		valid = false;
+	}
+	
+	public void InvalidateUpwards() {
+		for (int i = myPosition + 1; i < commands.length; i++ ){
+			commands[i].Invalidate();
+		}
+	}
+	
+	public synchronized boolean isValid() {
+		return valid;
 	}
 	
 	public StateCommand getPreviousCommand() {

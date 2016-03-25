@@ -47,7 +47,7 @@ public class ServerState implements Runnable {
 			}
 			if(firstCommand == null) {
 				try { Thread.sleep(1000); } catch (InterruptedException e) { continue; }
-			} else if(firstCommand.getTimestamp() <= getTime() ) {
+			} else if(firstCommand.getTimestamp() <= getTime() && firstCommand.isValid() ) {
 				// Execute command
 				deliver(firstCommand);
 				// Check if inconsistent with already executed state
@@ -65,7 +65,14 @@ public class ServerState implements Runnable {
 		}			
 	}
 	
-	public void deliver(StateCommand m) {
+	public void deliver(StateCommand sc) {
+		// Check if action is possible, if not, rollback previous state, and invalidate the commands for later states
+		if (!isPossible(sc.getMessage().getAction())) {
+			sc.InvalidateUpwards();
+			fasterState.rollback();
+			return;
+		}
+		// Perform action
 		
 	}
 	
