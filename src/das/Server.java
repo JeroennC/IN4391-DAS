@@ -72,11 +72,13 @@ public class Server extends Node {
 		}
 		changeState(State.Initialization);
 		if(unacknowledgedMessages.size() == ADDRESSES.length-1) {
+			// Start a new game, being the only server present
 			Battlefield bf = new Battlefield();
 			bf.initialize();
 			for(ServerState ss: trailingStates)
 				ss.init(bf);
 		} else {
+			// Copy state from other server
 			int copyServerId = ((int)(Math.random() * Integer.MAX_VALUE)) % serverAddresses.size();
 			String serverName = (String) serverAddresses.keySet().toArray()[copyServerId];
 			Address a = serverAddresses.get(serverName);
@@ -86,8 +88,12 @@ public class Server extends Node {
 	
 	public void receiveActionMessage(ActionMessage m) {
 		if(trailingStates[0].isPossible(m.getAction())) {
-			for(ServerState ss: trailingStates)
-				ss.receive(m);
+			// Create linked StateCommands
+			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
+			for(int i = 0; i < TSS_DELAYS.length; i++) {
+				commands[i] = new StateCommand(commands, i, m);
+				trailingStates[i].receive(commands[i]);
+			}
 			//TODO send DataMessage back to Client. Here or from first tss?
 		} else {
 			sendMessage(new DenyMessage(this, clientAddresses.get(m.getFrom_id()), m.getFrom_id(), m.getID()));
