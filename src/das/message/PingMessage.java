@@ -2,6 +2,7 @@ package das.message;
 import das.Client;
 import das.Node;
 import das.Node_RMI;
+import das.Server;
 
 
 public class PingMessage extends Message {
@@ -17,8 +18,9 @@ public class PingMessage extends Message {
 
 	@Override
 	public void receive(Node_RMI node) {
-		// TODO Auto-generated method stub
-
+		if (node instanceof Server) {
+			((Server)node).receivePingMessage(this);
+		}
 	}
 
 }

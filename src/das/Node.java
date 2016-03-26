@@ -14,7 +14,7 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 	protected int id;
 	protected String name;
 	
-	protected enum State { Disconnected, Initialization, Running, Inconsistent, Exit };
+	public enum State { Disconnected, Initialization, Running, Inconsistent, Exit };
 	protected volatile State state;
 	
 	protected Node(int id, String name) throws RemoteException {

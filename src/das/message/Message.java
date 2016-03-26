@@ -46,7 +46,7 @@ public abstract class Message implements Serializable {
 			setTimestamp(((Server) from).getTime());
 		if(receiver == null)
 			return;
-		System.out.println("Sendmessage "+this);
+		from.Print("Sendmessage "+this);
 		new Thread() {
 			  public void run() { 
 				  try {

@@ -57,7 +57,8 @@ public class Client extends Node {
 			if(state == State.Disconnected) {
 				//Do nothing
 			} else if(state == State.Running && _canMove) {
-				doMove();
+				if (player != null)
+					doMove();
 			} 
 			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
@@ -137,7 +138,7 @@ public class Client extends Node {
 		resetPulseTimer();
 		if (m.getID() != expectedDataMessageID) {
 			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
-			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedMessageID, m.getID() - 1));
+			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedDataMessageID, m.getID() - 1));
 		}
 		m.receive(this);		
 	}
@@ -226,5 +227,13 @@ public class Client extends Node {
 	
 	public void setPlayer(Unit player) {
 		this.player = player;
+	}
+	
+	public Battlefield getBattlefield() {
+		return bf;
+	}
+	
+	public boolean isRunning() {
+		return state != State.Exit;
 	}
 }

@@ -9,6 +9,8 @@ import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.List;
 
+import das.gui.ClientViewer;
+
 @SuppressWarnings("deprecation")
 public class Main {
 	private static class NodeRef {
@@ -55,6 +57,8 @@ public class Main {
 					} else if (sep[0].equals("sleep")){
 						int time = Integer.parseInt(sep[1]);
 						Thread.sleep(time);
+					} else if (sep[0].equals("view")) {
+						new ClientViewer();
 					} else if (sep[0].equals("exit")) {
 						System.out.println("System exiting..");
 						killRunningThreads();
