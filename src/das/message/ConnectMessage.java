@@ -1,6 +1,6 @@
 package das.message;
+import server.Server;
 import das.Client;
-import das.Server;
 import das.Node_RMI;
 
 

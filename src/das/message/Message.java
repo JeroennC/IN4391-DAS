@@ -5,10 +5,10 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
 
+import server.Server;
 import das.Client;
 import das.Node;
 import das.Node_RMI;
-import das.Server;
 
 public abstract class Message implements Serializable {
 	private static final long serialVersionUID = 5970408991964088527L;

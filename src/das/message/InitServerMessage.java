@@ -1,7 +1,8 @@
-package das;
+package das.message;
 
-import das.message.Address;
-import das.message.Message;
+import server.Server;
+import das.Node;
+import das.Node_RMI;
 
 public class InitServerMessage extends Message {
 

@@ -1,4 +1,4 @@
-package das;
+package server;
 
 import java.util.Iterator;
 import java.util.List;
@@ -7,6 +7,8 @@ import java.util.Queue;
 
 import com.sun.xml.internal.ws.api.server.ContainerResolver;
 
+import das.Battlefield;
+import das.Unit;
 import das.action.Action;
 import das.message.ActionMessage;
 

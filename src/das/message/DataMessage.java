@@ -1,7 +1,7 @@
 package das.message;
+import server.Server;
 import das.Client;
 import das.Node_RMI;
-import das.Server;
 
 
 public class DataMessage extends Message {

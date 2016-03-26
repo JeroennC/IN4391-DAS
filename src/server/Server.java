@@ -1,4 +1,4 @@
-package das;
+package server;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,6 +6,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import das.Battlefield;
+import das.Main;
+import das.Node;
+import das.Unit;
+import das.Node.State;
 import das.action.NewPlayer;
 import das.message.*;
 
