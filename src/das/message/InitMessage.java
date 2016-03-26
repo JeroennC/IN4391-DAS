@@ -1,8 +1,8 @@
 package das.message;
 
-import server.Server;
 import das.Client;
 import das.Node_RMI;
+import das.server.Server;
 
 public class InitMessage extends Message {
 	private static final long serialVersionUID = -2554610299918794996L;

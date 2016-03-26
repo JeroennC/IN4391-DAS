@@ -4,9 +4,9 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import server.Server;
 import das.action.MoveType;
 import das.message.*;
+import das.server.Server;
 
 public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;

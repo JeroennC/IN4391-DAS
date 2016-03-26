@@ -1,8 +1,8 @@
 package das.message;
-import server.Server;
 import das.Client;
 import das.Node_RMI;
 import das.action.Action;
+import das.server.Server;
 
 
 public class ActionMessage extends Message {

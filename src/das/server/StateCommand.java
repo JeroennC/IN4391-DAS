@@ -1,4 +1,4 @@
-package server;
+package das.server;
 
 import das.message.ActionMessage;
 
