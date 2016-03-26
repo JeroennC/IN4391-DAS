@@ -31,9 +31,11 @@ public class Battlefield {
 		
 		// Place dragons
 		Random rand = new Random(System.nanoTime());
+		boolean placed;
 		for (int i = 0; i < INITIAL_DRAGON_COUNT; i++) {
 			int hp = rand.nextInt(51) + 50;
 			int ap = rand.nextInt(16) + 5;
+			placed = false;
 			// 20 tries of placement
 			for (int j = 0; j < 20; j++ ){
 				int x = rand.nextInt(MAP_WIDTH);
@@ -41,8 +43,10 @@ public class Battlefield {
 				if (isOccupied(x, y)) continue;
 				
 				placeUnit(new Unit(highestUnitId++, x, y, hp, ap, false));
+				placed = true;
 				break;
 			}
+			if (placed) continue;
 			// If still not placed, put it in the first available from rand point
 			int x = rand.nextInt(MAP_WIDTH);
 			int y = rand.nextInt(MAP_HEIGHT);

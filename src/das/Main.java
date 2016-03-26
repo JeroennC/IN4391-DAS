@@ -8,6 +8,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import com.sun.jmx.snmp.tasks.ThreadService;
 
 import das.gui.ClientViewer;
 
@@ -62,6 +65,7 @@ public class Main {
 					} else if (sep[0].equals("exit")) {
 						System.out.println("System exiting..");
 						killRunningThreads();
+						//printRunningThreads();
 						break;
 					} else {
 						throw new Exception();
@@ -135,6 +139,15 @@ public class Main {
 		nodes.clear();
 	}
 	
+	/**
+	 * Print all running threads
+	 */
+	private static void printRunningThreads() {
+		Set<Thread> threads = Thread.getAllStackTraces().keySet();
+		for (Thread t : threads) {
+			System.out.println(t.getName());
+		}
+	}
 	
 	/**
 	 * Creates a new registry for remote method invocation, or retrieves it

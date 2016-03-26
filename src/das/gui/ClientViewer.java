@@ -54,10 +54,11 @@ public class ClientViewer extends JPanel implements Runnable {
 			e.printStackTrace();
 		}
 		Thread t = new Thread(client);
-		t.setName("ClientViewer");
+		t.setName("ClientViewer_Client");
 		t.start();
 		
 		runnerThread = new Thread(this);
+		runnerThread.setName("ClientViewer");
 		runnerThread.start();
 	}
 
@@ -141,7 +142,7 @@ public class ClientViewer extends JPanel implements Runnable {
 				// What happens if the user closes this window?
 				f.setVisible(false); // The window becomes invisible
 				client.changeState(das.Node.State.Exit);// And the client stops running
-				stopRunnerThread(); // And this thread stops running
+				f.dispose();
 			}
 		});
 		f.add(this);
@@ -159,6 +160,8 @@ public class ClientViewer extends JPanel implements Runnable {
 				e.printStackTrace();
 			}
 		}
+
+		System.out.println("This is the end.");
 	}
 	
 	/**
