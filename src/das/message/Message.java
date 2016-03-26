@@ -17,6 +17,7 @@ public abstract class Message implements Serializable {
 	private int message_id;
 	private transient final Node from;
 	private Address fromAddress;
+	private Address receiverAddress;
 	private final Node_RMI receiver;
 	private final String from_id;
 	private final String receiver_id;
@@ -26,13 +27,15 @@ public abstract class Message implements Serializable {
 	
 	public Message(Client from, Address to, int to_id) {
 		this(from, getComponent(to, "Server_"+to_id), "Server_"+to_id);
+		setReceiverAddress(to);
 	}
 	
 	public Message(Node from, Address to, String to_id)  {
 		this(from, getComponent(to, to_id), to_id);
+		setReceiverAddress(to);
 	}
 	
-	public Message(Node from, Node_RMI to, String id) {
+	private Message(Node from, Node_RMI to, String id) {
 		super();
 		this.from = from;
 		this.receiver = to;
@@ -110,6 +113,14 @@ public abstract class Message implements Serializable {
 
 	public void setAcks(List<Integer> acks) {
 		this.acks = acks;
+	}
+
+	public Address getReceiverAddress() {
+		return receiverAddress;
+	}
+
+	public void setReceiverAddress(Address receiverAddress) {
+		this.receiverAddress = receiverAddress;
 	}
 
 }
