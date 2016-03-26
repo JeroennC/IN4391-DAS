@@ -22,6 +22,7 @@ public class Client extends Node {
 	private int lastMessageSentID;
 	private int expectedDataMessageID;
 	private int expectedMessageID;
+	private List<Integer> receivedPastExpected;
 	
 	private Battlefield bf;
 	private Unit player;
@@ -43,6 +44,7 @@ public class Client extends Node {
 		expectedDataMessageID = 0;
 		expectedMessageID = 0;
 		lastMessageSentID = 0;
+		receivedPastExpected = new LinkedList<Integer>();
 	}
 
 	@Override
@@ -137,10 +139,19 @@ public class Client extends Node {
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
-		if (m.getID() != expectedDataMessageID) {
+		if (m.getID() > expectedMessageID) {
 			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
-			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedDataMessageID, m.getID() - 1));
-		}
+			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedMessageID, m.getID() - 1));
+			receivedPastExpected.add(m.getID());
+		} else if (m.getID() == expectedMessageID ){
+			expectedMessageID++;
+			receivedPastExpected.sort(null);
+			while(!receivedPastExpected.isEmpty() && receivedPastExpected.get(0) <= expectedMessageID)
+				expectedMessageID = Math.max(expectedMessageID, receivedPastExpected.remove(0));
+		} else
+			return;
+		if(receivedPastExpected.contains(m.getID()))
+			return;
 		m.receive(this);		
 	}
 	
@@ -191,9 +202,12 @@ public class Client extends Node {
 		Collections.sort(dataMessageBuffer, 
 				(DataMessage m1, DataMessage m2) -> m1.getDatamessage_id() - m2.getDatamessage_id());
 			
-		while (!dataMessageBuffer.isEmpty() && dataMessageBuffer.get(0).getDatamessage_id() == expectedDataMessageID) {
-			deliverData(dataMessageBuffer.remove(0));
-			expectedDataMessageID++;
+		while (!dataMessageBuffer.isEmpty() && dataMessageBuffer.get(0).getDatamessage_id() <= expectedDataMessageID) {
+			DataMessage dm = dataMessageBuffer.remove(0);
+			if(dm.getDatamessage_id() == expectedDataMessageID) {
+				deliverData(dataMessageBuffer.remove(0));
+				expectedDataMessageID++;
+			}
 		}
 	}
 	

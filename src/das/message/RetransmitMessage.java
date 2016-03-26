@@ -1,6 +1,7 @@
 package das.message;
 import das.Client;
 import das.Node_RMI;
+import das.server.Server;
 
 
 public class RetransmitMessage extends Message {
@@ -17,8 +18,12 @@ public class RetransmitMessage extends Message {
 
 	@Override
 	public void receive(Node_RMI node) {
-		// TODO Auto-generated method stub
-
+		((Server) node).receiveRetransmitMessage(this);
+	}
+	
+	@Override
+	public String toString() {
+		return "RetransmitMessage ("+getFrom_id()+"->"+getReceiver_id()+") [ "+firstMessage_id + ", "+lastMessage_id + "]";
 	}
 
 }
