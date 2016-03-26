@@ -1,19 +1,29 @@
 package das.server;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import das.Battlefield;
 import das.Main;
 import das.Node;
-import das.Unit;
-import das.Node.State;
-import das.action.NewPlayer;
-import das.message.*;
+import das.message.ActionMessage;
+import das.message.Address;
+import das.message.ConnectMessage;
+import das.message.Data;
+import das.message.DataMessage;
+import das.message.DenyMessage;
+import das.message.InitMessage;
+import das.message.InitServerMessage;
+import das.message.Message;
+import das.message.NewServerMessage;
+import das.message.PingMessage;
+import das.message.PulseMessage;
+import das.message.RedirectMessage;
+import das.message.RetransmitMessage;
+import das.message.ServerUpdateMessage;
 
 
 public class Server extends Node {
@@ -43,7 +53,7 @@ public class Server extends Node {
 			if (i>0) trailingStates[i].setFasterState(trailingStates[i-1]);
 			if (i>0) trailingStates[i-1].setSlowerState(trailingStates[i]);
 		}
-		connections = new HashMap<String, Connection>();
+		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
 	}
 
@@ -72,6 +82,9 @@ public class Server extends Node {
 			bf.initialize();
 			for(ServerState ss: trailingStates)
 				ss.init(bf);
+			for(ServerState ss: trailingStates)
+				new Thread(ss).start();
+			changeState(State.Running);
 		} else {
 			// Copy state from other server
 			Map<String, ServerConnection> serverConnections = getServerConnections();
@@ -86,11 +99,13 @@ public class Server extends Node {
 		if(trailingStates[0].isPossible(m.getAction())) {
 			// Create linked StateCommands
 			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
-			for(int i = 0; i < TSS_DELAYS.length; i++) {
+			for(int i = 0; i < TSS_DELAYS.length; i++) 
 				commands[i] = new StateCommand(commands, i, m);
+			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
-			}
-			//TODO send DataMessage back to Client. Here or from first tss?
+			Data d = trailingStates[0].receive(commands[0]);
+			int dataId = getClientConnections().get(m.getFrom_id()).incrementLastDataMessageSentID();
+			sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d , m.getID(), dataId)) ;
 		} else {
 			sendMessage(new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID()));
 		}
@@ -116,15 +131,11 @@ public class Server extends Node {
 		ClientConnection c = (ClientConnection) getConnections().get(m.getFrom_id());
 		c.setLastMessageSentID(0);
 		c.setLastDataMessageSentID(0);
-		Data d = new Data();
 		// Create new player
 		int playerId = trailingStates[0].getNextUnitId();
-		//TODO Create ActionMessage without using m.getFrom(), for this gives an exception because m.getFrom is a RMI object
-		//ActionMessage newPlayer = new ActionMessage((Client)m.getFrom(), clientAddresses.get(m.getFrom_id()), this.id, new NewPlayer(playerId));
-		//try { receiveMessage(newPlayer); } catch (RemoteException e1) {	}
-		// Wait to ensure player exists in unit list
-		try { Thread.sleep(500); } catch (InterruptedException e) { }
-		// Gather data in data object from trailingStates[0]
+		receiveActionMessage(new ActionMessage(m, playerId));
+		
+		/*// Gather data in data object from trailingStates[0]
 		d.setUpdatedUnits(trailingStates[0].getUnitList());
 		// Get player
 		Unit player = null;
@@ -135,7 +146,7 @@ public class Server extends Node {
 			}
 		}
 		d.setPlayer(player);
-		sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d, 0, 0));
+		sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d, 0, 0));*/
 	}
 	
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {

@@ -10,6 +10,10 @@ public class ClientConnection extends Connection {
 		this.setLastDataMessageSentID(0);
 	}
 
+	public int incrementLastDataMessageSentID() {
+		return lastDataMessageSentID++;
+	}
+	
 	public int getLastDataMessageSentID() {
 		return lastDataMessageSentID;
 	}

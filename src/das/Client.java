@@ -138,6 +138,7 @@ public class Client extends Node {
 
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
+		Print("received message: "+m.toString());
 		resetPulseTimer();
 		if (m.getID() > expectedMessageID) {
 			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
@@ -189,6 +190,7 @@ public class Client extends Node {
 	public void receiveRedirectMessage(RedirectMessage m) {
 		if(state == State.Running)
 			reset();
+		expectedMessageID = 0;
 		Print("Change server id from "+server_id +" to "+m.getServer_id());
 		server_id = m.getServer_id();
 		serverAddress = Server.ADDRESSES[server_id];
@@ -197,6 +199,7 @@ public class Client extends Node {
 	}
 	
 	public void receiveData(DataMessage m) {
+		Print("Datamesssage "+m);
 		sentActionMessages.removeIf(n -> n.getID() == m.getActionMessage_id());
 		dataMessageBuffer.add(m);
 		Collections.sort(dataMessageBuffer, 
@@ -205,7 +208,7 @@ public class Client extends Node {
 		while (!dataMessageBuffer.isEmpty() && dataMessageBuffer.get(0).getDatamessage_id() <= expectedDataMessageID) {
 			DataMessage dm = dataMessageBuffer.remove(0);
 			if(dm.getDatamessage_id() == expectedDataMessageID) {
-				deliverData(dataMessageBuffer.remove(0));
+				deliverData(dm);
 				expectedDataMessageID++;
 			}
 		}

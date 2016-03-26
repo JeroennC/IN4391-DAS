@@ -43,6 +43,19 @@ public abstract class Message implements Serializable {
 		this.fromAddress = from.getAddress();
 		this.receiver_id = id;		
 	}
+	
+	protected Message(Message m) {
+		message_id = m.getID();
+		fromAddress = m.getFromAddress();
+		receiverAddress = m.getReceiverAddress();
+		receiver = m.receiver;
+		from_id = m.getFrom_id();
+		from = m.getFrom();
+		receiver_id = m.getReceiver_id();
+		messageTail = m.messageTail;
+		timestamp = m.getTimestamp();
+		acks = m.getAcks();
+	}
 		
 	public void send() {
 		if(from instanceof Server)
@@ -121,6 +134,11 @@ public abstract class Message implements Serializable {
 
 	public void setReceiverAddress(Address receiverAddress) {
 		this.receiverAddress = receiverAddress;
+	}
+	
+	@Override
+	public String toString() {
+		return getClass().getName()+ "["+message_id+"]";
 	}
 
 }

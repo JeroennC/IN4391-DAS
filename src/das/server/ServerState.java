@@ -5,12 +5,14 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
-import com.sun.xml.internal.ws.api.server.ContainerResolver;
-
 import das.Battlefield;
 import das.Unit;
 import das.action.Action;
-import das.message.ActionMessage;
+import das.action.Heal;
+import das.action.Hit;
+import das.action.Move;
+import das.action.NewPlayer;
+import das.message.Data;
 
 public class ServerState implements Runnable {
 	private Server server;
@@ -67,15 +69,26 @@ public class ServerState implements Runnable {
 		}			
 	}
 	
-	public void deliver(StateCommand sc) {
+	public Data deliver(StateCommand sc) {
+		Action a = sc.getMessage().getAction();
 		// Check if action is possible, if not, rollback previous state, and invalidate the commands for later states
-		if (!isPossible(sc.getMessage().getAction())) {
+		if (!isPossible(a)) {
 			sc.InvalidateUpwards();
 			fasterState.rollback();
-			return;
+			return null;
 		}
-		// Perform action
-		
+		boolean newPlayer = (a instanceof NewPlayer && ((NewPlayer) a).getNewUnit() == null);
+		Data d = new Data();
+		Unit u = bf.doAction(a);
+		if(a instanceof Heal) 
+			d.updateUnit(bf.getUnit(((Heal) a).getReceiverId()));
+		else if (a instanceof Hit) 
+			d.updateUnit(bf.getUnit(((Hit) a).getReceiverId()));
+		else
+			d.updateUnit(u);
+		if(newPlayer)
+			d.setPlayer(u);
+		return d;
 	}
 	
 	public boolean isPossible(Action action) {
@@ -115,11 +128,15 @@ public class ServerState implements Runnable {
 		this.slowerState = slowerState;
 	}
 
-	public void receive(StateCommand m) {
-		synchronized(inbox) {		
-			inbox.add(m);
-		}
-		runningThread.interrupt();
+	public Data receive(StateCommand m) {
+		if(delay > 0) {
+			synchronized(inbox) {		
+				inbox.add(m);
+			}
+			runningThread.interrupt();
+			return null;
+		} else
+			return deliver(m);
 	}
 	
 	public List<Unit> getUnitList() {

@@ -66,7 +66,7 @@ public class Battlefield {
 		}
 	}
 	
-	public Unit createAndPlaceNewPlayer() {
+	public Unit createAndPlaceNewPlayer(int newPlayerId) {
 		// TODO Check if board is not full?
 		Random rand = new Random(System.nanoTime());
 		Unit u;
@@ -78,7 +78,8 @@ public class Battlefield {
 			int y = rand.nextInt(MAP_HEIGHT);
 			if (isOccupied(x, y)) continue;
 			
-			u = new Unit(highestUnitId++, x, y, hp, ap, true);
+			u = new Unit(newPlayerId, x, y, hp, ap, true);
+			highestUnitId = Math.max(highestUnitId, newPlayerId+1);
 			placeUnit(u);
 			break;
 		}
@@ -87,7 +88,8 @@ public class Battlefield {
 		int y = rand.nextInt(MAP_HEIGHT);
 		while (true) {
 			if (!isOccupied(x,y)) {
-				u = new Unit(highestUnitId++, x, y, hp, ap, true);
+				u = new Unit(newPlayerId, x, y, hp, ap, true);
+				highestUnitId = Math.max(highestUnitId, newPlayerId+1);
 				placeUnit(u);
 				break;
 			}
@@ -257,6 +259,9 @@ public class Battlefield {
 	}
 	
 	public boolean isActionAllowed(Action action) {
+		if (action instanceof NewPlayer) {
+			return getUnit(action.getExecuterId()) == null;
+		}
 		// Get unit
 		Unit unit = getUnit(action.getExecuterId());
 		if (!unit.isAlive()) return false;
@@ -299,11 +304,30 @@ public class Battlefield {
 			// Must be opposite types, not dead
 			if (dest.isAlive() && (dest.isType() ^ unit.isType())) return true;
 			return false;
-		} else if (action instanceof NewPlayer) {
-			return getUnit(action.getExecuterId()) == null;
 		}
-		
 		return false;
+	}
+	
+	public Unit doAction(Action action) {
+		if (action instanceof NewPlayer) {
+			NewPlayer newPlayer = (NewPlayer) action;
+			Unit newUnit = newPlayer.getNewUnit();
+			if(newUnit == null) {
+				newUnit = createAndPlaceNewPlayer(action.getExecuterId());
+				newPlayer.setNewUnit(newUnit);
+			} else
+					placeUnit(newUnit);
+			return newUnit;
+		}
+		Unit unit = getUnit(action.getExecuterId());		
+		if (action instanceof Move) {	
+			moveUnit(unit, ((Move) action).getMoveType());
+		} else if (action instanceof Heal) {
+			healUnit(unit, getUnit(((Heal) action).getReceiverId()));
+		} else if (action instanceof Hit) {
+			attackUnit(unit, getUnit(((Hit) action).getReceiverId()));
+		} 
+		return unit;
 	}
 	
 	public List<Unit> getUnitList() {
