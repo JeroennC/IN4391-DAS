@@ -250,8 +250,4 @@ public class Client extends Node {
 	public Battlefield getBattlefield() {
 		return bf;
 	}
-	
-	public boolean isRunning() {
-		return state != State.Exit;
-	}
 }

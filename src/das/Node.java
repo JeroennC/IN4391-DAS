@@ -6,6 +6,7 @@ import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
+import das.Node.State;
 import das.message.Address;
 
 public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runnable {
@@ -73,5 +74,9 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 	
 	public void Printf(String msg, Object... arg1) {
 		System.out.printf(getName() + ": " + msg + "\n", arg1);
+	}
+	
+	public boolean isRunning() {
+		return state != State.Exit;
 	}
 }

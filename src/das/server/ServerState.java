@@ -43,7 +43,7 @@ public class ServerState implements Runnable {
 	public void run() {
 		runningThread = Thread.currentThread();
 		state = State.Running;
-		while(state != State.Exit) {
+		while(server.isRunning()) {
 			Thread.interrupted();
 			StateCommand firstCommand = null;
 			synchronized(inbox) {
