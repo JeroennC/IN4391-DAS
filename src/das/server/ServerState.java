@@ -86,8 +86,10 @@ public class ServerState implements Runnable {
 			d.updateUnit(bf.getUnit(((Hit) a).getReceiverId()));
 		else
 			d.updateUnit(u);
-		if(newPlayer)
+		if(newPlayer) {
+			d.setUpdatedUnits(bf.getUnitList());
 			d.setPlayer(u);
+		}
 		return d;
 	}
 	

@@ -74,6 +74,7 @@ public class Client extends Node {
 	
 	// Synchronized on battlefield so other threads don't mess things up
 	public void doMove() {
+		//TODO send messages
 		synchronized(bf) {
 			if(!bf.hasDragons() || !player.isAlive()) {
 				// Game is over, change client state

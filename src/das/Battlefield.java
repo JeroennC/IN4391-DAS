@@ -163,8 +163,9 @@ public class Battlefield {
 		}
 		// Check if move allowed
 		if (!inBounds(destX, destY) || isOccupied(destX, destY)) return false;
-		
+		map[unit.getX()][unit.getY()] = null;
 		unit.setPosition(destX, destY);
+		map[destX][destY] = unit;
 		return true;
 	}
 	
