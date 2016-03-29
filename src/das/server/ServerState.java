@@ -43,6 +43,7 @@ public class ServerState implements Runnable {
 	public void run() {
 		runningThread = Thread.currentThread();
 		state = State.Running;
+		if(delay == 0) return;
 		while(server.isRunning()) {
 			Thread.interrupted();
 			StateCommand firstCommand = null;
@@ -64,7 +65,7 @@ public class ServerState implements Runnable {
 					//TODO add to other list
 				}
 			} else {
-				try { Thread.sleep(firstCommand.getTimestamp() - getTime()); } catch (InterruptedException e) { continue; }
+				try { Thread.sleep(Math.max(1, firstCommand.getTimestamp() - getTime())); } catch (InterruptedException e) { continue; }
 			}	
 		}			
 	}
@@ -82,9 +83,13 @@ public class ServerState implements Runnable {
 		Unit u = bf.doAction(a);
 		if(a instanceof Heal) 
 			d.updateUnit(bf.getUnit(((Heal) a).getReceiverId()));
-		else if (a instanceof Hit) 
-			d.updateUnit(bf.getUnit(((Hit) a).getReceiverId()));
-		else
+		else if (a instanceof Hit) {
+			if(bf.getUnit(((Hit) a).getReceiverId()) == null)
+				d.deleteUnit(((Hit) a).getReceiverId());
+			else
+				d.updateUnit(bf.getUnit(((Hit) a).getReceiverId()));
+			
+		} else
 			d.updateUnit(u);
 		if(newPlayer) {
 			d.setUpdatedUnits(bf.getUnitList());
@@ -165,5 +170,9 @@ public class ServerState implements Runnable {
 		}
 		
 		return result;
+	}
+	
+	public void Print(String print) {
+		server.Print(print + " / "+delay);
 	}
 }

@@ -79,9 +79,10 @@ public class Battlefield {
 			if (isOccupied(x, y)) continue;
 			
 			u = new Unit(newPlayerId, x, y, hp, ap, true);
-			highestUnitId = Math.max(highestUnitId, newPlayerId+1);
+			highestUnitId = Math.max(highestUnitId, newPlayerId);
 			placeUnit(u);
-			break;
+			highestUnitId++;
+			return u;
 		}
 		// If still not placed, put it in the first available from rand point
 		int x = rand.nextInt(MAP_WIDTH);
@@ -101,6 +102,7 @@ public class Battlefield {
 					y = 0;
 			}
 		}
+		highestUnitId++;
 		return u;
 	}
 	
@@ -297,13 +299,13 @@ public class Battlefield {
 			
 			Heal heal = (Heal)action;
 			Unit dest = getUnit(heal.getReceiverId());
-			if (dest.isAlive() && dest.isType() && unit.canReach(dest)) return true;
+			if (dest != null && dest.isAlive() && dest.isType() && unit.canReach(dest)) return true;
 			return false;
 		} else if (action instanceof Hit) {
 			Hit hit = (Hit)action;
 			Unit dest = getUnit(hit.getReceiverId());
 			// Must be opposite types, not dead
-			if (dest.isAlive() && (dest.isType() ^ unit.isType())) return true;
+			if (dest != null && dest.isAlive() && (dest.isType() ^ unit.isType())) return true;
 			return false;
 		}
 		return false;
