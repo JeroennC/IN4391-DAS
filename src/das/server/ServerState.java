@@ -116,7 +116,7 @@ public class ServerState implements Runnable {
 	}
 	
 	public long getTime() {
-		return server.getTime() + delay;
+		return server.getTime() - delay;
 	}
 
 	public ServerState getFasterState() {
