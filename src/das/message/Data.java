@@ -60,4 +60,14 @@ public class Data implements Serializable {
 	public void setDeletedUnits(List<Integer> deletedUnits) {
 		this.deletedUnits = deletedUnits;
 	}
+	
+	public Data clone() {
+		Data d = new Data();
+		d.player = this.player;
+		d.deletedUnits = new ArrayList<Integer>(this.deletedUnits);
+		d.updatedUnits = new ArrayList<Unit>();
+		for(Unit u: this.updatedUnits)
+			d.updatedUnits.add(u.clone());
+		return d;
+	}
 }

@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import das.Battlefield;
 import das.Main;
 import das.Node;
+import das.Unit;
 import das.message.ActionMessage;
 import das.message.Address;
 import das.message.ConnectMessage;
@@ -74,6 +75,7 @@ public class Server extends Node {
 		}
 		
 		close();
+		pulse.interrupt();
 	}
 	
 	private void connect() {
@@ -122,11 +124,21 @@ public class Server extends Node {
 			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
 			for(int i = 0; i < TSS_DELAYS.length; i++) 
 				commands[i] = new StateCommand(commands, i, m);
-			Data d = trailingStates[0].receive(commands[0]);
+			Data data = trailingStates[0].receive(commands[0]);
 			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
-			int dataId = getClientConnections().get(m.getFrom_id()).incrementLastDataMessageSentID();
-			sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d , m.getID(), dataId)) ;
+			Unit player = data.getPlayer();
+			for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
+				int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
+				int am = -1;
+				Data d = data.clone();
+				if(e.getKey().equals(m.getFrom_id())) {
+					am = m.getID();
+					d.setPlayer(player);
+				} else
+					d.setPlayer(null);
+				sendMessage(new DataMessage(this, e.getValue().getAddress(), e.getKey(), d , am, dataId)) ;
+			}
 		} else {
 			sendMessage(new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID()));
 		}
@@ -186,14 +198,16 @@ public class Server extends Node {
 	}
 
 	@Override
-	public void receiveMessage(Message m) throws RemoteException {
+	public synchronized void receiveMessage(Message m) throws RemoteException {
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
 			if(!(m instanceof NewServerMessage))
 				updateTimer(m);
 			ServerConnection c = getServerConnections().get(m.getFrom_id());
-			if(c == null)
-				c = (ServerConnection) getConnections().put(m.getFrom_id(), new ServerConnection( m.getFromAddress()) );
+			if(c == null) {
+				c = new ServerConnection( m.getFromAddress());
+				getConnections().put(m.getFrom_id(), c );
+			}
 			c.addAck(m.getID());
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
