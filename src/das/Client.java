@@ -153,7 +153,7 @@ public class Client extends Node {
 			receivedPastExpected.add(m.getID());
 		} else if (m.getID() == expectedMessageID ){
 			expectedMessageID++;
-			receivedPastExpected.sort(null);
+			Collections.sort(receivedPastExpected);
 			while(!receivedPastExpected.isEmpty() && receivedPastExpected.get(0) <= expectedMessageID)
 				expectedMessageID = Math.max(expectedMessageID, receivedPastExpected.remove(0));
 		} else

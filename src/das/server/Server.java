@@ -145,7 +145,12 @@ public class Server extends Node {
 	}
 	
 	public void receiveRetransmitMessage(RetransmitMessage m) {
-		//TODO how to store messages, and for how long? What when a retransmitmessage is received for a message that is expired?
+		Connection c = getConnections().get(m.getFrom_id());
+		for(int i=m.getFirstMessage_id(); i<=m.getLastMessage_id(); i++) {
+			Message ret = c.getSentMessage(i);
+			if(ret!=null)
+				resendMessage(ret);
+		}
 	}
 	
 	public void receivePingMessage(PingMessage m) {
@@ -263,11 +268,16 @@ public class Server extends Node {
 		m.setID(m_id);
 		if(c != null) {
 			c.setLastMessageSentID(m_id + 1);
+			c.addMessage(m);
 			if(m.getReceiver_id().startsWith("Server")) {
 				unacknowledgedMessages.add(m);
 				m.setAcks(c.getAndResetAcks());
 			}
 		}
+		m.send();
+	}
+	
+	public synchronized void resendMessage(Message m) {
 		m.send();
 	}
 }

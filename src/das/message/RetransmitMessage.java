@@ -25,5 +25,21 @@ public class RetransmitMessage extends Message {
 	public String toString() {
 		return "RetransmitMessage ("+getFrom_id()+"->"+getReceiver_id()+") [ "+firstMessage_id + ", "+lastMessage_id + "]";
 	}
+	
+	public int getFirstMessage_id() {
+		return firstMessage_id;
+	}
+
+	public void setFirstMessage_id(int firstMessage_id) {
+		this.firstMessage_id = firstMessage_id;
+	}
+
+	public int getLastMessage_id() {
+		return lastMessage_id;
+	}
+
+	public void setLastMessage_id(int lastMessage_id) {
+		this.lastMessage_id = lastMessage_id;
+	}
 
 }
