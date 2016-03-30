@@ -3,6 +3,7 @@ import java.rmi.RemoteException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,7 @@ public class Server extends Node {
 	private long deltaTime;
 	private Map<String, Connection> connections;
 	private List<Message> unacknowledgedMessages;
+	private Thread pulse;
 	
 	private ServerState[] trailingStates;
 	
@@ -55,6 +57,13 @@ public class Server extends Node {
 		}
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
+		
+		pulse = new Thread() {
+			public void run() { 
+				callPulse();
+			}
+		};
+		pulse.start();
 	}
 
 	@Override
@@ -95,15 +104,27 @@ public class Server extends Node {
 		}
 	}
 	
+	public void callPulse() {
+		while(state != State.Exit) {
+			Map<String, ClientConnection> cs = getClientConnections();
+			for(Entry<String, ClientConnection> e: cs.entrySet()) {
+				e.getValue().canMove(true);
+				sendMessage(new PulseMessage(this, e.getValue().getAddress(), e.getKey() ));
+			}
+			try { Thread.sleep(PULSE); } catch (InterruptedException e1) { }
+		}
+	}
+	
 	public void receiveActionMessage(ActionMessage m) {
-		if(trailingStates[0].isPossible(m.getAction())) {
+		if(getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())) {
+			getClientConnections().get(m.getFrom_id()).canMove(false);
 			// Create linked StateCommands
 			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
 			for(int i = 0; i < TSS_DELAYS.length; i++) 
 				commands[i] = new StateCommand(commands, i, m);
+			Data d = trailingStates[0].receive(commands[0]);
 			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
-			Data d = trailingStates[0].receive(commands[0]);
 			int dataId = getClientConnections().get(m.getFrom_id()).incrementLastDataMessageSentID();
 			sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d , m.getID(), dataId)) ;
 		} else {
@@ -166,7 +187,6 @@ public class Server extends Node {
 
 	@Override
 	public void receiveMessage(Message m) throws RemoteException {
-		Print("received message: "+m.toString());
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
 			if(!(m instanceof NewServerMessage))

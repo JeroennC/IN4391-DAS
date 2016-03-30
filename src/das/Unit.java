@@ -7,12 +7,12 @@ public class Unit implements Serializable {
 	private static final int reachDistance = 2;
 	
 	private int id;
-	private int x;
-	private int y;
-	private int hp;
+	private volatile int x;
+	private volatile int y;
+	private volatile int hp;
 	private int ap;
 	private int maxHp;
-	private boolean alive = true;
+	private volatile boolean alive = true;
 	
 	// true if human, false if dragon
 	private boolean type;
@@ -68,6 +68,14 @@ public class Unit implements Serializable {
 		setX(x);
 		setY(y);
 	}
+	
+	@Override
+	public String toString() {
+		return "Unit [id=" + id + ", x=" + x + ", y=" + y + ", hp=" + hp
+				+ ", ap=" + ap + ", maxHp=" + maxHp + ", alive=" + alive
+				+ ", type=" + type + "]";
+	}
+
 	public int getHp() {
 		return hp;
 	}

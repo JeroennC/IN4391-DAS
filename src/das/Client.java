@@ -4,6 +4,10 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import das.action.Action;
+import das.action.Heal;
+import das.action.Hit;
+import das.action.Move;
 import das.action.MoveType;
 import das.message.*;
 import das.server.Server;
@@ -54,14 +58,16 @@ public class Client extends Node {
 		
 		connect();
 		
-		// TODO Initialize battlefield
 		// Start main loop
 		while(state != State.Exit) {
 			if(state == State.Disconnected) {
 				//Do nothing
 			} else if(state == State.Running && _canMove) {
-				if (player != null)
-					doMove();
+				if (player != null) {
+					Action a = doMove();
+					if(a != null)
+						sendMessage(new ActionMessage(this, serverAddress, server_id, a));
+				}
 			} 
 			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
@@ -73,13 +79,14 @@ public class Client extends Node {
 	}
 	
 	// Synchronized on battlefield so other threads don't mess things up
-	public void doMove() {
+	public Action doMove() {
 		synchronized(bf) {
+			_canMove = false;
 			if(!bf.hasDragons() || !player.isAlive()) {
 				// Game is over, change client state
 				Print("Game over");
 				changeState(State.Exit);
-				return;
+				return null;
 			}
 			List<Unit> nearUnits = bf.getSurroundingUnits(player);
 			
@@ -88,7 +95,7 @@ public class Client extends Node {
 				if (u.isType() && u.needsHealing()) {
 					bf.healUnit(player, u);
 					Print("Healed player " + u.getId());
-					return;
+					return new Heal(player.getId(), u.getId());
 				}
 			}
 			// Attack dragon if it is near
@@ -96,7 +103,7 @@ public class Client extends Node {
 				if (!u.isType()) {
 					bf.attackUnit(player, u);
 					Printf("Attacked %d, health left: %d", u.getId(), u.getHp());
-					return;
+					return new Hit(player.getId(), u.getId());
 				}
 			}
 			// Move towards nearest dragon
@@ -122,6 +129,7 @@ public class Client extends Node {
 				}
 			}
 			Printf("Moved to %s, now at x %d, y %d ", m.toString(), player.getX(), player.getY());
+			return new Move(player.getId(), m);
 		}
 	}
 	
@@ -138,7 +146,6 @@ public class Client extends Node {
 
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
-		Print("received message: "+m.toString());
 		resetPulseTimer();
 		if (m.getID() > expectedMessageID) {
 			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
@@ -216,16 +223,24 @@ public class Client extends Node {
 	
 	public void deliverData(DataMessage m) {
 		synchronized(bf) {
+			Print("Received data: "+m.getData());
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
 				if (u_old != null ) {
 					bf.updateUnit(u_old, u_new);
 				} else {
+					Print("New Unit: "+u_new);
 					bf.placeUnit(u_new);
 					if(u_new.equals(m.getData().getPlayer()))
 						player = u_new;
 				}
 			}
+			for(Integer id: m.getData().getDeletedUnits()) {
+				Unit u = bf.getUnit(id);
+				if(u != null)
+					bf.killUnit(u);
+			}
+				
 		}
 		if(state == State.Initialization) {
 			for(ActionMessage am: sentActionMessages)
