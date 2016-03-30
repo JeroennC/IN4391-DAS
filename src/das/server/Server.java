@@ -82,8 +82,8 @@ public class Server extends Node {
 			bf.initialize();
 			for(ServerState ss: trailingStates)
 				ss.init(bf);
-			for(ServerState ss: trailingStates)
-				new Thread(ss).start();
+			for(int i = 0; i < trailingStates.length; i++)
+				new Thread(trailingStates[i], this.getName() + "_ts_" + i).start();
 			changeState(State.Running);
 		} else {
 			// Copy state from other server
