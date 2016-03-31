@@ -1,5 +1,7 @@
 package das.server;
 
+import java.io.Serializable;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -24,6 +26,7 @@ public class ServerState implements Runnable {
 	private volatile State state;
 	private enum State {Start, Running, Inconsistent, Exit};
 	private Thread runningThread;
+	private static Comparator<StateCommand> comparator = (Comparator<StateCommand> & Serializable)((StateCommand m1, StateCommand m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
 	
 	public ServerState(Server server, long delay) {
 		super();
@@ -31,7 +34,7 @@ public class ServerState implements Runnable {
 		this.delay = delay;
 		bf = new Battlefield();
 		this.state = State.Start;
-		inbox = new PriorityQueue<StateCommand>(1, (StateCommand m1, StateCommand m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+		inbox = new PriorityQueue<StateCommand>(1, comparator);
 	}
 	
 	public void init(Battlefield battlefield) {
@@ -109,7 +112,7 @@ public class ServerState implements Runnable {
 		// Care, always acquire locks in this order, no deadlocks :)
 		synchronized (inbox) {
 			synchronized (bf) {
-				bf = slowerState.bf.clone();
+				bf = slowerState.cloneBattlefield();
 				inbox = slowerState.cloneInbox();
 			}
 		}
@@ -138,7 +141,8 @@ public class ServerState implements Runnable {
 	public Data receive(StateCommand m) {
 		if(delay > 0) {
 			synchronized(inbox) {		
-				inbox.add(m);
+				if(!inbox.contains(m))
+					inbox.add(m);
 			}
 			runningThread.interrupt();
 			return null;
@@ -155,7 +159,7 @@ public class ServerState implements Runnable {
 	}
 	
 	public synchronized Queue<StateCommand> cloneInbox() {
-		Queue<StateCommand> result = new PriorityQueue<StateCommand>(1, (StateCommand m1, StateCommand m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+		Queue<StateCommand> result = new PriorityQueue<StateCommand>(1, comparator);
 		if (fasterState == null) return result;
 		
 		StateCommand c_mine, c_new;
@@ -170,6 +174,12 @@ public class ServerState implements Runnable {
 		}
 		
 		return result;
+	}
+	
+	public Battlefield cloneBattlefield() {
+		synchronized(bf) {
+			return bf.clone();
+		}
 	}
 	
 	public void Print(String print) {
