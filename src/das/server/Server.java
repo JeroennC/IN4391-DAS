@@ -83,7 +83,7 @@ public class Server extends Node {
 			if(id != i)
 				sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
 		
-		for(int i=0; i<20 && !unacknowledgedMessages.isEmpty(); i++) {
+		for(int i=0; i<20; i++) {
 			try { Thread.sleep(100); } catch (InterruptedException e) { }
 		}
 		changeState(State.Initialization);
@@ -172,19 +172,6 @@ public class Server extends Node {
 		// Create new player
 		int playerId = trailingStates[0].getNextUnitId();
 		receiveActionMessage(new ActionMessage(m, playerId));
-		
-		/*// Gather data in data object from trailingStates[0]
-		d.setUpdatedUnits(trailingStates[0].getUnitList());
-		// Get player
-		Unit player = null;
-		for (Unit unit : d.getUpdatedUnits()) {
-			if (unit.getId() == playerId) {
-				player = unit;
-				break;
-			}
-		}
-		d.setPlayer(player);
-		sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d, 0, 0));*/
 	}
 	
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {

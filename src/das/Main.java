@@ -3,6 +3,7 @@ package das;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.rmi.NotBoundException;
 import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
@@ -165,7 +166,9 @@ public class Main {
 		} catch (RemoteException e) {
 			try{
 				registry = java.rmi.registry.LocateRegistry.getRegistry(port);
-			} catch (RemoteException e2){
+				for(String s: registry.list())
+					registry.unbind(s);
+			} catch (RemoteException | NotBoundException e2){
 				e.printStackTrace();
 				e2.printStackTrace();
 				return;
