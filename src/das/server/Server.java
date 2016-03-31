@@ -4,12 +4,15 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import das.Battlefield;
 import das.Main;
 import das.Node;
+import das.Unit;
 import das.message.ActionMessage;
 import das.message.Address;
 import das.message.ConnectMessage;
@@ -24,6 +27,7 @@ import das.message.PingMessage;
 import das.message.PulseMessage;
 import das.message.RedirectMessage;
 import das.message.RetransmitMessage;
+import das.message.ServerStartDataMessage;
 import das.message.ServerUpdateMessage;
 
 
@@ -45,6 +49,7 @@ public class Server extends Node {
 	private Thread pulse;
 	
 	private ServerState[] trailingStates;
+	private Queue<Message> inbox;
 	
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
@@ -57,7 +62,8 @@ public class Server extends Node {
 		}
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
-		
+		inbox = new PriorityQueue<Message>(1, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+				
 		pulse = new Thread() {
 			public void run() { 
 				callPulse();
@@ -70,10 +76,17 @@ public class Server extends Node {
 	public void run() {
 		connect();
 		while(state != State.Exit) {
-			
+			Print("Time: "+((long) getTime()/1000));
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		close();
+		pulse.interrupt();
 	}
 	
 	private void connect() {
@@ -81,7 +94,7 @@ public class Server extends Node {
 			if(id != i)
 				sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
 		
-		for(int i=0; i<20 && !unacknowledgedMessages.isEmpty(); i++) {
+		for(int i=0; i<20; i++) {
 			try { Thread.sleep(100); } catch (InterruptedException e) { }
 		}
 		changeState(State.Initialization);
@@ -101,6 +114,7 @@ public class Server extends Node {
 			String serverName = (String) serverConnections.keySet().toArray()[copyServerId];
 			Address a = getAddress(serverName);
 			sendMessage(new InitServerMessage(this, a, serverName));
+			//TODO wait for Running, or reset and try other server
 		}
 	}
 	
@@ -122,18 +136,33 @@ public class Server extends Node {
 			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
 			for(int i = 0; i < TSS_DELAYS.length; i++) 
 				commands[i] = new StateCommand(commands, i, m);
-			Data d = trailingStates[0].receive(commands[0]);
+			Data data = trailingStates[0].receive(commands[0]);
 			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
-			int dataId = getClientConnections().get(m.getFrom_id()).incrementLastDataMessageSentID();
-			sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d , m.getID(), dataId)) ;
+			Unit player = data.getPlayer();
+			for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
+				int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
+				int am = -1;
+				Data d = data.clone();
+				if(e.getKey().equals(m.getFrom_id())) {
+					am = m.getID();
+					d.setPlayer(player);
+				} else
+					d.setPlayer(null);
+				sendMessage(new DataMessage(this, e.getValue().getAddress(), e.getKey(), d , am, dataId)) ;
+			}
 		} else {
 			sendMessage(new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID()));
 		}
 	}
 	
 	public void receiveRetransmitMessage(RetransmitMessage m) {
-		//TODO how to store messages, and for how long? What when a retransmitmessage is received for a message that is expired?
+		Connection c = getConnections().get(m.getFrom_id());
+		for(int i=m.getFirstMessage_id(); i<=m.getLastMessage_id(); i++) {
+			Message ret = c.getSentMessage(i);
+			if(ret!=null)
+				resendMessage(ret);
+		}
 	}
 	
 	public void receivePingMessage(PingMessage m) {
@@ -155,19 +184,6 @@ public class Server extends Node {
 		// Create new player
 		int playerId = trailingStates[0].getNextUnitId();
 		receiveActionMessage(new ActionMessage(m, playerId));
-		
-		/*// Gather data in data object from trailingStates[0]
-		d.setUpdatedUnits(trailingStates[0].getUnitList());
-		// Get player
-		Unit player = null;
-		for (Unit unit : d.getUpdatedUnits()) {
-			if (unit.getId() == playerId) {
-				player = unit;
-				break;
-			}
-		}
-		d.setPlayer(player);
-		sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d, 0, 0));*/
 	}
 	
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {
@@ -182,25 +198,48 @@ public class Server extends Node {
 	}
 	
 	public void receiveInitServerMessage(InitServerMessage initServerMessage) {
-		// send data to server		
+		Battlefield bf = trailingStates[TSS_DELAYS.length-1].cloneBattlefield();
+		Queue<StateCommand> inbox = trailingStates[TSS_DELAYS.length-1].cloneInbox();
+		ServerStartDataMessage m = new ServerStartDataMessage(
+				this, initServerMessage.getFromAddress(), initServerMessage.getFrom_id(), bf, inbox, getTime());
+		sendMessage(m);
+	}
+	
+	public void receiveServerStartDataMessage(ServerStartDataMessage m) {
+		updateDeltaTime(m.getTime() - getTime());
+		changeState(State.Running);
 	}
 
 	@Override
-	public void receiveMessage(Message m) throws RemoteException {
+	public synchronized void receiveMessage(Message m) throws RemoteException {
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
-			if(!(m instanceof NewServerMessage))
+			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
 				updateTimer(m);
 			ServerConnection c = getServerConnections().get(m.getFrom_id());
-			if(c == null)
-				c = (ServerConnection) getConnections().put(m.getFrom_id(), new ServerConnection( m.getFromAddress()) );
-			c.addAck(m.getID());
+			if(c == null) {
+				c = new ServerConnection( m.getFromAddress());
+				getConnections().put(m.getFrom_id(), c );
+			}
+			c.addAck(m.getID());				
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
 			if(!getConnections().containsKey(m.getFrom_id()))
 				getConnections().put(m.getFrom_id(), new ClientConnection( m.getFromAddress()) );
 		}
-		m.receive(this);		
+		for(Message n: inbox)
+			if(canReceive(n))
+				n.receive(this);
+		if(canReceive(m))
+			m.receive(this);
+		else
+			inbox.add(m);
+	}
+	
+	public boolean canReceive(Message m) {
+		return !(  (state == State.Disconnected && !(m instanceof ServerUpdateMessage || m instanceof PingMessage)) 
+				|| (state == State.Initialization && !(m instanceof ServerStartDataMessage || m instanceof PingMessage))
+				|| (state == State.Inconsistent && (m instanceof ActionMessage || m instanceof InitServerMessage || m instanceof InitMessage)));
 	}
 
 	private void updateTimer(Message m) {
@@ -249,11 +288,16 @@ public class Server extends Node {
 		m.setID(m_id);
 		if(c != null) {
 			c.setLastMessageSentID(m_id + 1);
+			c.addMessage(m);
 			if(m.getReceiver_id().startsWith("Server")) {
 				unacknowledgedMessages.add(m);
 				m.setAcks(c.getAndResetAcks());
 			}
 		}
+		m.send();
+	}
+	
+	public synchronized void resendMessage(Message m) {
 		m.send();
 	}
 }

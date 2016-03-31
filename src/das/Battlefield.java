@@ -1,5 +1,6 @@
 package das;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -7,7 +8,9 @@ import java.util.Random;
 
 import das.action.*;
 
-public class Battlefield {
+public class Battlefield implements Serializable {
+	private static final long serialVersionUID = -8734973792602687196L;
+	
 	public static final int MAP_WIDTH = 25;
 	public static final int MAP_HEIGHT = 25;
 	public static final int INITIAL_DRAGON_COUNT = 20;

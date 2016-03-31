@@ -27,12 +27,8 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 		Main.registerObject(this);
 	}
 	
-	protected void close() {
-		try {
-			UnicastRemoteObject.unexportObject(this, true);
-		} catch (NoSuchObjectException e) {
-			e.printStackTrace();
-		}
+	protected void close() {	
+		Main.unregisterObject(this);
 	}
 	
 	public void changeState(State newState) {
