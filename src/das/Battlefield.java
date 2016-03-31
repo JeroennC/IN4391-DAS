@@ -10,7 +10,7 @@ import das.action.*;
 public class Battlefield {
 	public static final int MAP_WIDTH = 25;
 	public static final int MAP_HEIGHT = 25;
-	private static final int INITIAL_DRAGON_COUNT = 20;
+	public static final int INITIAL_DRAGON_COUNT = 20;
 	private Unit[][] map;
 	private List<Unit> unitList;
 	private int dragonCount;
@@ -267,7 +267,7 @@ public class Battlefield {
 		}
 		// Get unit
 		Unit unit = getUnit(action.getExecuterId());
-		if (!unit.isAlive()) return false;
+		if (unit == null || !unit.isAlive()) return false;
 		
 		if (action instanceof Move) {
 			// Dragons can't move

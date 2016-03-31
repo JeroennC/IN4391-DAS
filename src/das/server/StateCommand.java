@@ -69,4 +69,10 @@ public class StateCommand {
 		// TODO could be more sophisticated, is now very strict
 		return getPreviousCommand() == null || getCommandNr() == getPreviousCommand().getCommandNr();
 	}
+	
+	public StateCommand reset() {
+		this.valid = true;
+		this.command_nr = 0;
+		return this;
+	}
 }

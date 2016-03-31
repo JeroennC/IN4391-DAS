@@ -14,6 +14,7 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 	
 	protected int id;
 	protected String name;
+	private boolean doesPrint;
 	
 	public enum State { Disconnected, Initialization, Running, Inconsistent, Exit };
 	protected volatile State state;
@@ -22,6 +23,7 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 		super();
 		this.id = id;
 		this.name = name;
+		doesPrint = true;
 		Main.registerObject(this);
 	}
 	
@@ -69,14 +71,24 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 	}
 	
 	public void Print(String msg) {
-		System.out.println(getName() + ": " + msg);
+		if (doesPrint)
+			System.out.println(getName() + ": " + msg);
 	}
 	
 	public void Printf(String msg, Object... arg1) {
-		System.out.printf(getName() + ": " + msg + "\n", arg1);
+		if (doesPrint)
+			System.out.printf(getName() + ": " + msg + "\n", arg1);
 	}
 	
 	public boolean isRunning() {
 		return state != State.Exit;
+	}
+	
+	public void setPrinting(boolean print) {
+		doesPrint = print;
+	}
+	
+	public boolean isPrinting() {
+		return doesPrint;
 	}
 }

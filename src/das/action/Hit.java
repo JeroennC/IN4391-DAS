@@ -13,4 +13,9 @@ public class Hit extends Action {
 	public int getReceiverId() {
 		return receiver_id;
 	}
+	
+	@Override
+	public String toString() {
+		return "[Hit [executer_id=" + getExecuterId() + " receiver_id=" + getReceiverId() +"]]";
+	}
 }

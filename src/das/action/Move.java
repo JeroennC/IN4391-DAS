@@ -12,4 +12,9 @@ public class Move extends Action {
 	public MoveType getMoveType() {
 		return move;
 	}
+	
+	@Override
+	public String toString() {
+		return "[Move [executer_id=" + getExecuterId() + " direction=" + move.toString() +"]]";
+	}
 }

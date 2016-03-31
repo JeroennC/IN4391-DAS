@@ -13,4 +13,9 @@ public abstract class Action implements Serializable {
 	public int getExecuterId() {
 		return executer_id;
 	}
+	
+	@Override
+	public String toString() {
+		return "[Action [executer_id=" + executer_id + "]]";
+	}
 }

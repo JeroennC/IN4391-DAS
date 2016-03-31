@@ -19,5 +19,9 @@ public class NewPlayer extends Action {
 	public void setNewUnit(Unit newUnit) {
 		this.newUnit = newUnit;
 	}
-
+	
+	@Override
+	public String toString() {
+		return "[NewPlayer [executer_id=" + getExecuterId() +"]]";
+	}
 }

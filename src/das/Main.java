@@ -48,9 +48,15 @@ public class Main {
 					// Process input
 					if(sep[0].equals("start")) {
 						int id = Integer.parseInt(sep[2]);
+						boolean silent = false;
+						if (sep.length >= 4) {
+							// Additional option
+							if (sep[3].equals("silent") || sep[3].equals("s"))
+								silent = true;
+						}
 						if (sep[1].equals("Client") || sep[1].equals("Server")) {
 							if (!isIdActive(sep[1], id))
-								startThread(sep[1], id);
+								startThread(sep[1], id, silent);
 							else
 								System.out.println(sep[1] + ", id " + id +" already taken.");
 						} 
@@ -66,6 +72,7 @@ public class Main {
 					} else if (sep[0].equals("exit")) {
 						System.out.println("System exiting..");
 						killRunningThreads();
+						//try { Thread.sleep(1000); } catch (Exception e) {};
 						//printRunningThreads();
 						break;
 					} else {
@@ -100,13 +107,14 @@ public class Main {
 	 * Launch a thread
 	 * @throws RemoteException 
 	 */
-	private static void startThread(String type, int id) throws RemoteException {
+	private static void startThread(String type, int id, boolean isSilent) throws RemoteException {
 		Node n;
 		if (type.equals("Client")) {
 			n = new Client(id);
 		} else { // Server
 			n = new Server(id);
 		}
+		n.setPrinting(!isSilent);
 		Thread t = new Thread(n);
 		t.setName(type + "_" + id);
 		nodes.add(new NodeRef(t, n));
