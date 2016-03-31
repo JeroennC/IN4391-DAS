@@ -7,6 +7,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -191,6 +192,15 @@ public class Main {
 			e.printStackTrace();
 		}
 		return n;
+	}
+
+	public static void unregisterObject(Node node) {
+		try {
+			UnicastRemoteObject.unexportObject(node, true);
+			getRegistry().unbind(node.getName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}		
 	}
 	
 
