@@ -4,6 +4,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -25,6 +27,7 @@ import das.message.PingMessage;
 import das.message.PulseMessage;
 import das.message.RedirectMessage;
 import das.message.RetransmitMessage;
+import das.message.ServerStartDataMessage;
 import das.message.ServerUpdateMessage;
 
 
@@ -46,6 +49,7 @@ public class Server extends Node {
 	private Thread pulse;
 	
 	private ServerState[] trailingStates;
+	private Queue<Message> inbox;
 	
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
@@ -58,7 +62,8 @@ public class Server extends Node {
 		}
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
-		
+		inbox = new PriorityQueue<Message>(1, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+				
 		pulse = new Thread() {
 			public void run() { 
 				callPulse();
@@ -71,7 +76,13 @@ public class Server extends Node {
 	public void run() {
 		connect();
 		while(state != State.Exit) {
-			
+			Print("Time: "+((long) getTime()/1000));
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		close();
@@ -103,6 +114,7 @@ public class Server extends Node {
 			String serverName = (String) serverConnections.keySet().toArray()[copyServerId];
 			Address a = getAddress(serverName);
 			sendMessage(new InitServerMessage(this, a, serverName));
+			//TODO wait for Running, or reset and try other server
 		}
 	}
 	
@@ -186,27 +198,48 @@ public class Server extends Node {
 	}
 	
 	public void receiveInitServerMessage(InitServerMessage initServerMessage) {
-		// send data to server		
+		Battlefield bf = trailingStates[TSS_DELAYS.length-1].cloneBattlefield();
+		Queue<StateCommand> inbox = trailingStates[TSS_DELAYS.length-1].cloneInbox();
+		ServerStartDataMessage m = new ServerStartDataMessage(
+				this, initServerMessage.getFromAddress(), initServerMessage.getFrom_id(), bf, inbox, getTime());
+		sendMessage(m);
+	}
+	
+	public void receiveServerStartDataMessage(ServerStartDataMessage m) {
+		updateDeltaTime(m.getTime() - getTime());
+		changeState(State.Running);
 	}
 
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
-			if(!(m instanceof NewServerMessage))
+			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
 				updateTimer(m);
 			ServerConnection c = getServerConnections().get(m.getFrom_id());
 			if(c == null) {
 				c = new ServerConnection( m.getFromAddress());
 				getConnections().put(m.getFrom_id(), c );
 			}
-			c.addAck(m.getID());
+			c.addAck(m.getID());				
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
 			if(!getConnections().containsKey(m.getFrom_id()))
 				getConnections().put(m.getFrom_id(), new ClientConnection( m.getFromAddress()) );
 		}
-		m.receive(this);		
+		for(Message n: inbox)
+			if(canReceive(n))
+				n.receive(this);
+		if(canReceive(m))
+			m.receive(this);
+		else
+			inbox.add(m);
+	}
+	
+	public boolean canReceive(Message m) {
+		return !(  (state == State.Disconnected && !(m instanceof ServerUpdateMessage || m instanceof PingMessage)) 
+				|| (state == State.Initialization && !(m instanceof ServerStartDataMessage || m instanceof PingMessage))
+				|| (state == State.Inconsistent && (m instanceof ActionMessage || m instanceof InitServerMessage || m instanceof InitMessage)));
 	}
 
 	private void updateTimer(Message m) {

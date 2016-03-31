@@ -1,8 +1,12 @@
 package das.server;
 
+import java.io.Serializable;
+
 import das.message.ActionMessage;
 
-public class StateCommand {
+public class StateCommand implements Serializable {
+	private static final long serialVersionUID = -4010748658507289583L;
+	
 	// Points to the equivalent command in other server states
 	private StateCommand[] commands;
 	private int myPosition;

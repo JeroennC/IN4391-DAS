@@ -141,4 +141,32 @@ public abstract class Message implements Serializable {
 		return getClass().getName()+ "["+message_id+"]";
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((from_id == null) ? 0 : from_id.hashCode());
+		result = prime * result + message_id;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Message other = (Message) obj;
+		if (from_id == null) {
+			if (other.from_id != null)
+				return false;
+		} else if (!from_id.equals(other.from_id))
+			return false;
+		if (message_id != other.message_id)
+			return false;
+		return true;
+	}
+
 }
