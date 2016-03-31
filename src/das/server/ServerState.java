@@ -28,6 +28,7 @@ public class ServerState implements Runnable {
 	private enum State {Start, Running, Inconsistent, Exit};
 	private Thread runningThread;
 	private static Comparator<StateCommand> comparator = (Comparator<StateCommand> & Serializable)((StateCommand m1, StateCommand m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+	private long lastExecutedTime;
 	
 	public ServerState(Server server, long delay) {
 		super();
@@ -36,6 +37,7 @@ public class ServerState implements Runnable {
 		bf = new Battlefield();
 		this.state = State.Start;
 		nextCommandNr = 0;
+		lastExecutedTime = 0;
 		inbox = new PriorityQueue<StateCommand>(1, comparator);
 	}
 	
@@ -81,6 +83,7 @@ public class ServerState implements Runnable {
 					if(deliver(firstCommand) != null) {
 						// Stamp command nr
 						firstCommand.setCommandNr(nextCommandNr++);
+						lastExecutedTime = Math.max(firstCommand.getTimestamp(), lastExecutedTime);
 						// Check if inconsistent with already executed state
 						if(!firstCommand.isConsistent()) {
 							Print("Inconsistent! " + firstCommand.getCommandNr()
@@ -168,13 +171,9 @@ public class ServerState implements Runnable {
 						// Execute command
 						if(deliver(firstCommand) != null) {
 							executed++;
+							lastExecutedTime = Math.max(firstCommand.getTimestamp(), lastExecutedTime);
 							// Stamp command nr
 							firstCommand.setCommandNr(nextCommandNr++);
-							// Check if inconsistent with already executed state
-							if(!firstCommand.isConsistent()) {
-								Print("2 Inconsistent! " + firstCommand.getCommandNr()
-										+ " <> " + firstCommand.getCommands()[firstCommand.getPosition() - 1].getCommandNr());
-							}
 						} 
 						inbox.remove(firstCommand);
 					} else {
@@ -212,20 +211,26 @@ public class ServerState implements Runnable {
 		this.slowerState = slowerState;
 	}
 
-	public Data receive(StateCommand m) {
+	public Data receive(StateCommand sc) {
+		if (slowerState == null && sc.getTimestamp() < lastExecutedTime) {
+			// Last trailing state is possibly inconsistent
+			// TODO handle it
+			Print("I am inconsistent :(");
+		}
 		if(delay > 0) {
 			synchronized(inbox) {		
-				if(!inbox.contains(m))
-					inbox.add(m);
+				if(!inbox.contains(sc))
+					inbox.add(sc);
 			}
 			runningThread.interrupt();
 			return null;
 		} else {
 			Data d;
 			synchronized(bf) {
-				d = deliver(m);
+				d = deliver(sc);
+				lastExecutedTime = Math.max(sc.getTimestamp(), lastExecutedTime);
 				if (d != null)
-					m.setCommandNr(nextCommandNr++);
+					sc.setCommandNr(nextCommandNr++);
 			}
 			return d;
 		}

@@ -54,8 +54,8 @@ public class TestClient {
 		Data data = new Data();
 		data.setUpdatedUnits(updateUnits);
 		data.setPlayer(player);
-		DataMessage msg = new DataMessage(null, "Client_1",  data,  1, 1 );
-		client.sendMessage(msg);
+		//DataMessage msg = new DataMessage(null, "Client_1",  data,  1, 1 );
+		//client.sendMessage(msg);
 		
 		new Thread(client).start();
 		
