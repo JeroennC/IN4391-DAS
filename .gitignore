@@ -1,3 +1,7 @@
+# Personal
+/log/
+
+# Other
 .metadata
 bin/
 tmp/

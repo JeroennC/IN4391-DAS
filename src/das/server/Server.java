@@ -13,6 +13,8 @@ import das.Battlefield;
 import das.Main;
 import das.Node;
 import das.Unit;
+import das.log.LogEntry;
+import das.log.LogSender;
 import das.message.ActionMessage;
 import das.message.Address;
 import das.message.ConnectMessage;
@@ -21,6 +23,7 @@ import das.message.DataMessage;
 import das.message.DenyMessage;
 import das.message.InitMessage;
 import das.message.InitServerMessage;
+import das.message.LogMessage;
 import das.message.Message;
 import das.message.NewServerMessage;
 import das.message.PingMessage;
@@ -41,6 +44,7 @@ public class Server extends Node {
 		new Address("localhost", Main.port),
 		}; //TODO temporal solution, Addresses can also be read from a file
 	public static final int PULSE = 1000;//ms
+	public static final String LOG_DIR = "log";
 	private static final int[] TSS_DELAYS = {0, 200, 500, 1000, 10000};
 	
 	private long deltaTime;
@@ -64,6 +68,9 @@ public class Server extends Node {
 		unacknowledgedMessages = new LinkedList<Message>();
 		inbox = new PriorityQueue<Message>(1, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
 				
+		logSender = new LogSender(this);
+		new Thread(logSender, this.getId() + "_LogSender").start();
+		
 		pulse = new Thread() {
 			public void run() { 
 				callPulse();
@@ -74,6 +81,7 @@ public class Server extends Node {
 
 	@Override
 	public void run() {
+		Log("Initializing");
 		connect();
 		while(state != State.Exit) {
 			Print("Time: "+((long) getTime()/1000));
@@ -85,6 +93,7 @@ public class Server extends Node {
 			}
 		}
 		
+		Log("Shutting down");
 		close();
 		pulse.interrupt();
 	}
@@ -184,6 +193,9 @@ public class Server extends Node {
 		// Create new player
 		int playerId = trailingStates[0].getNextUnitId();
 		receiveActionMessage(new ActionMessage(m, playerId));
+		
+		// Log
+		Log("Initializing client: " + m.getFrom_id());
 	}
 	
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {
@@ -299,5 +311,26 @@ public class Server extends Node {
 	
 	public synchronized void resendMessage(Message m) {
 		m.send();
+	}
+	
+	/* Logging */
+	private LogSender logSender;
+	
+	public void Log(String content) {
+		LogEntry e = new LogEntry(this.getName(), content, this.getTime());
+		e.WriteToFile(this.getName() + ".txt");
+		logSender.add(e);
+	}
+	
+	public void receiveLogMessage(LogMessage m) {
+		// Write to log
+		m.getEntries().forEach(entry -> entry.WriteToFile(this.getName() + ".txt"));
+	}
+	
+	public void sendLog(List<LogEntry> logs) {
+		Map<String, ServerConnection> cs = getServerConnections();
+		for(Entry<String, ServerConnection> e: cs.entrySet()) {
+			sendMessage(new LogMessage(this, e.getValue().getAddress(), e.getKey(), logs));
+		}
 	}
 }
