@@ -17,7 +17,7 @@ public class LogSender implements Runnable{
 		
 		// Make sure directory exists
 		File f = new File(Server.LOG_DIR);
-		if (!f.getParentFile().exists())
+		if (!f.exists())
 			f.mkdirs();
 	}
 	
