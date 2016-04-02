@@ -32,6 +32,6 @@ public class LogEntry implements Serializable {
 	
 	@Override
 	public String toString() {
-		return source + "(@" + new Timestamp(timestamp).toString() + "): " + content;
+		return source + "(@" + new Timestamp(timestamp).toString() + "): " + content + "\n";
 	}
 }
