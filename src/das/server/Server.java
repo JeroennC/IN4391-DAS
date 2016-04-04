@@ -84,7 +84,7 @@ public class Server extends Node {
 		Log("Initializing");
 		connect();
 		while(state != State.Exit) {
-			Print("Time: "+((long) getTime()/1000));
+			
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
@@ -139,8 +139,10 @@ public class Server extends Node {
 	}
 	
 	public void receiveActionMessage(ActionMessage m) {
-		if(getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())) {
-			getClientConnections().get(m.getFrom_id()).canMove(false);
+		boolean fromClient = m.getFrom_id().startsWith("Client");
+		if(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction()))) {
+			if(fromClient)
+				getClientConnections().get(m.getFrom_id()).canMove(false);
 			// Create linked StateCommands
 			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
 			for(int i = 0; i < TSS_DELAYS.length; i++) 
@@ -148,19 +150,26 @@ public class Server extends Node {
 			Data data = trailingStates[0].receive(commands[0]);
 			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
-			Unit player = data.getPlayer();
-			for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
-				int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
-				int am = -1;
-				Data d = data.clone();
-				if(e.getKey().equals(m.getFrom_id())) {
-					am = m.getID();
-					d.setPlayer(player);
-				} else
-					d.setPlayer(null);
-				sendMessage(new DataMessage(this, e.getValue().getAddress(), e.getKey(), d , am, dataId)) ;
+			if(fromClient) {
+				Unit player = data.getPlayer();
+				for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
+					int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
+					int am = -1;
+					Data d = data.clone();
+					if(e.getKey().equals(m.getFrom_id())) {
+						am = m.getID();
+						d.setPlayer(player);
+					} else
+						d.setPlayer(null);
+					sendMessage(new DataMessage(this, e.getValue().getAddress(), e.getKey(), d , am, dataId)) ;
+				}
+				for(Entry<String, ServerConnection> e: getServerConnections().entrySet()) {
+					ActionMessage am = new ActionMessage(this, e.getValue().getAddress(), e.getKey(), m.getAction());
+					am.setTimestamp(m.getTimestamp());
+					sendMessage(am);
+				}
 			}
-		} else {
+		} else if(fromClient) {
 			sendMessage(new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID()));
 		}
 	}
@@ -219,6 +228,13 @@ public class Server extends Node {
 	
 	public void receiveServerStartDataMessage(ServerStartDataMessage m) {
 		updateDeltaTime(m.getTime() - getTime());
+		for(ServerState ss: trailingStates)
+			ss.init(m.getBf());
+		for(int i = 0; i < trailingStates.length; i++)
+			new Thread(trailingStates[i], this.getName() + "_ts_" + i).start();
+		for(int i=0;i<TSS_DELAYS.length;i++)
+			for(StateCommand sc: m.getInbox())
+				trailingStates[i].receive(sc);
 		changeState(State.Running);
 	}
 

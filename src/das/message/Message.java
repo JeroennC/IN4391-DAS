@@ -22,7 +22,7 @@ public abstract class Message implements Serializable {
 	private final String from_id;
 	private final String receiver_id;
 	private Message[] messageTail;
-	private long timestamp;
+	private long timestamp = 0;
 	private List<Integer> acks;	
 	
 	public Message(Client from, Address to, int to_id) {
@@ -58,7 +58,7 @@ public abstract class Message implements Serializable {
 	}
 		
 	public void send() {
-		if(from instanceof Server)
+		if(from instanceof Server && timestamp == 0)
 			setTimestamp(((Server) from).getTime());
 		if(receiver == null)
 			return;
