@@ -264,6 +264,33 @@ public class Battlefield implements Serializable {
 		return null;
 	}
 	
+	public Unit getClosestPlayer(Unit unit) {
+		int dist = 1;
+		int ux = unit.getX();
+		int uy = unit.getY();
+		int maxDist = 2;
+		int[] posneg = new int[]{-1, 1};
+		int destx, desty;
+		
+		for (; dist <= maxDist; dist++) {
+			for (int xtoy = 0; xtoy <= dist; xtoy++) {
+				for(int xpn : posneg) {
+					for (int ypn : posneg) {
+						destx = ux + xpn * (dist - xtoy);
+						desty = uy + ypn * (xtoy);
+						if (inBounds(destx, desty) 
+								&& isOccupied(destx, desty)
+								&& getUnit(destx, desty).isHuman()) {
+							return getUnit(destx, desty);
+						}
+					}
+				}
+			}
+		}
+		
+		return null;
+	}
+	
 	public boolean isActionAllowed(Action action) {
 		if (action instanceof NewPlayer) {
 			return getUnit(action.getExecuterId()) == null;

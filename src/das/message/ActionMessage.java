@@ -22,6 +22,11 @@ public class ActionMessage extends Message {
 		super(from, to, to_id);
 		this.action = a;
 	}
+	
+	public ActionMessage(Server from, Action a) {
+		super(from);
+		this.action = a;
+	}
 
 	@Override
 	public void receive(Node_RMI node) {

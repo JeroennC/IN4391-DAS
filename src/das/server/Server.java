@@ -13,6 +13,7 @@ import das.Battlefield;
 import das.Main;
 import das.Node;
 import das.Unit;
+import das.action.Hit;
 import das.log.LogEntry;
 import das.log.LogSender;
 import das.message.ActionMessage;
@@ -47,6 +48,12 @@ public class Server extends Node {
 	public static final String LOG_DIR = "log";
 	private static final int[] TSS_DELAYS = {0, 200, 500, 1000, 10000};
 	
+	/* Server positioning */
+	private Object dragonControl;
+	private boolean canMove;
+	private int serversRunning;
+	private int position;
+	
 	private long deltaTime;
 	private Map<String, Connection> connections;
 	private List<Message> unacknowledgedMessages;
@@ -67,9 +74,12 @@ public class Server extends Node {
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
 		inbox = new PriorityQueue<Message>(1, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
-				
+		
+		dragonControl = new Object();
 		logSender = new LogSender(this);
 		new Thread(logSender, this.getId() + "_LogSender").start();
+		
+		canMove = false;
 		
 		pulse = new Thread() {
 			public void run() { 
@@ -84,6 +94,33 @@ public class Server extends Node {
 		Log("Initializing");
 		connect();
 		while(state != State.Exit) {
+			// Dragon control
+			if (canMove) {
+				List<ActionMessage> messages = new LinkedList<ActionMessage>();
+				synchronized(dragonControl) {
+					Battlefield bf = trailingStates[0].getBattlefield();
+					synchronized(bf) {
+						bf.getUnitList()
+							.parallelStream()
+							.filter(u -> 
+								{ return u.isDragon() && u.getId() % serversRunning == position; }
+							).forEach(dragon -> {
+								Unit target = bf.getClosestPlayer(dragon);
+								if (target != null) {
+									// Attack
+									Printf("Dragon %d attacking player %d", dragon.getId(), target.getId());
+									ActionMessage am = new ActionMessage(this, new Hit(dragon.getId(), target.getId()));
+									am.setTimestamp(this.getTime());
+									messages.add(am);
+								}
+							});
+					}
+					for (ActionMessage am : messages)
+						receiveActionMessage(am);
+				}
+				this.canMove = false;
+			}
+			
 			Print("Time: "+((long) getTime()/1000));
 			try {
 				Thread.sleep(1000);
@@ -125,6 +162,7 @@ public class Server extends Node {
 			sendMessage(new InitServerMessage(this, a, serverName));
 			//TODO wait for Running, or reset and try other server
 		}
+		updateServerPositioning();
 	}
 	
 	public void callPulse() {
@@ -134,18 +172,42 @@ public class Server extends Node {
 				e.getValue().canMove(true);
 				sendMessage(new PulseMessage(this, e.getValue().getAddress(), e.getKey() ));
 			}
+			this.canMove = true;
 			try { Thread.sleep(PULSE); } catch (InterruptedException e1) { }
 		}
 	}
 	
-	public void receiveActionMessage(ActionMessage m) {
-		if(getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())) {
+	public synchronized void receiveActionMessage(ActionMessage m) {
+		if(m.getFrom_id().startsWith("Server")) {
+			// Handle self-generated action (dragon attack)
+			// Create linked StateCommands
+			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
+			for(int i = 0; i < TSS_DELAYS.length; i++) 
+				commands[i] = new StateCommand(commands, i, m);
+			Data data = trailingStates[0].receive(commands[0]);
+			if (data == null) {
+				return;
+			}
+			for(int i = 1; i < TSS_DELAYS.length; i++)
+				trailingStates[i].receive(commands[i]);
+			for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
+				int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
+				int am = -1;
+				Data d = data.clone();
+				d.setPlayer(null);
+				sendMessage(new DataMessage(this, e.getValue().getAddress(), e.getKey(), d , am, dataId)) ;
+			}
+		} else if(getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())) {
 			getClientConnections().get(m.getFrom_id()).canMove(false);
 			// Create linked StateCommands
 			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
 			for(int i = 0; i < TSS_DELAYS.length; i++) 
 				commands[i] = new StateCommand(commands, i, m);
 			Data data = trailingStates[0].receive(commands[0]);
+			if (data == null) {
+				sendMessage(new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID()));
+				return;
+			}
 			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
 			Unit player = data.getPlayer();
@@ -219,6 +281,7 @@ public class Server extends Node {
 	
 	public void receiveServerStartDataMessage(ServerStartDataMessage m) {
 		updateDeltaTime(m.getTime() - getTime());
+		updateServerPositioning();
 		changeState(State.Running);
 	}
 
@@ -331,6 +394,19 @@ public class Server extends Node {
 		Map<String, ServerConnection> cs = getServerConnections();
 		for(Entry<String, ServerConnection> e: cs.entrySet()) {
 			sendMessage(new LogMessage(this, e.getValue().getAddress(), e.getKey(), logs));
+		}
+	}
+	
+	/* Server positioning */
+	public void updateServerPositioning() {
+		Map<String, ServerConnection> cs = getServerConnections();
+		synchronized(dragonControl) {
+			position = 0;
+			serversRunning = 1 + cs.size();
+			for(String key : cs.keySet()) {
+				if (this.getName().compareTo(key) > 0)
+					position++;
+			}
 		}
 	}
 }

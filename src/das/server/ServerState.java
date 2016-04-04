@@ -115,6 +115,10 @@ public class ServerState implements Runnable {
 		// Check if action is possible, if not, rollback previous state, and invalidate the commands for later states
 		if (!isPossible(a)) {
 			sc.InvalidateUpwards();
+			if (this.delay == 10000) {
+				Print("Debug");
+				isPossible(a);
+			}
 			Print("Invalid action: " + a.toString());
 			return null;
 		}
@@ -266,6 +270,10 @@ public class ServerState implements Runnable {
 		synchronized(bf) {
 			return bf.clone();
 		}
+	}
+	
+	public Battlefield getBattlefield() {
+		return bf;
 	}
 	
 	public void Print(String print) {

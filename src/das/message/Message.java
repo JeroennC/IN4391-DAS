@@ -35,6 +35,14 @@ public abstract class Message implements Serializable {
 		setReceiverAddress(to);
 	}
 	
+	public Message(Server from) {
+		this.receiver = null;
+		this.receiver_id = from.getName();
+		this.from_id = from.getName();
+		this.fromAddress = from.getAddress();
+		this.from = from;
+	}
+	
 	private Message(Node from, Node_RMI to, String id) {
 		super();
 		this.from = from;
