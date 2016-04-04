@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 
 import das.action.*;
+import das.message.Data;
 
 public class Battlefield implements Serializable {
 	private static final long serialVersionUID = -8734973792602687196L;
@@ -144,7 +145,7 @@ public class Battlefield implements Serializable {
 		if (!u.isType()) dragonCount++;
 		unitList.add(u);
 		
-		if (u.getId() > highestUnitId) {
+		if (u.getId() >= highestUnitId) {
 			highestUnitId = u.getId() + 1;
 		}
 	}
@@ -377,11 +378,37 @@ public class Battlefield implements Serializable {
 		this.unitList.forEach(unit -> {
 			bf.placeUnit(unit.clone());
 		});
-		
+		//bf.dragonCount = this.dragonCount;
+		//bf.highestUnitId = this.highestUnitId;
 		return bf;
 	}
 	
 	public int getNextUnitId() {
 		return highestUnitId;
+	}
+	
+	public Data difference(Battlefield bf) {
+		Data d = new Data();
+		for(Unit u1: unitList) {
+			Unit u2 = bf.getUnit(u1);
+			if(u2 == null) {
+				d.deleteUnit(u1.getId());
+				continue;
+			}
+			if(u1.getX() != u2.getX() || u1.getY() != u2.getY() || u1.getHp() != u2.getHp())
+				d.updateUnit(u1);
+		}
+		for(Unit u2: bf.getUnitList()) {
+			Unit u1 = bf.getUnit(u2);
+			if(u1 == null)
+				d.updateUnit(u2);
+		}
+		return d;
+	}
+	
+	public Data getData() {
+		Data d = new Data();
+		d.setUpdatedUnits(unitList);
+		return d;
 	}
 }

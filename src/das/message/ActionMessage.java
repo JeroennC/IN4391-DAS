@@ -28,6 +28,11 @@ public class ActionMessage extends Message {
 		this.action = a;
 	}
 
+	public ActionMessage(Server from, Address to, String to_id, Action a) {
+		super(from, to, to_id);
+		this.action = a;
+	}
+
 	@Override
 	public void receive(Node_RMI node) {
 		((Server) node).receiveActionMessage(this);

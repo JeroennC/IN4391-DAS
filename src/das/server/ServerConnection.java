@@ -8,11 +8,14 @@ import das.message.Address;
 public class ServerConnection extends Connection {
 	private List<Integer> acks;
 	private int serverLoad;
+	private long lastServerStatusTime;
 	
-	public ServerConnection(Address a) {
+	public ServerConnection(Address a, long lastConnectionTime) {
 		super(a);
 		this.setAcks(new LinkedList<Integer>());
 		this.setServerLoad(0);
+		this.setLastConnectionTime(lastConnectionTime);
+		this.setLastConnectionTime(lastConnectionTime);
 	}
 	
 	public void addAck(int a) {
@@ -52,5 +55,13 @@ public class ServerConnection extends Connection {
 
 	public void setServerLoad(int serverLoad) {
 		this.serverLoad = serverLoad;
+	}
+
+	public long getLastServerStatusTime() {
+		return lastServerStatusTime;
+	}
+
+	public void setLastServerStatusTime(long lastServerStatusTime) {
+		this.lastServerStatusTime = lastServerStatusTime;
 	}
 }

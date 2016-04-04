@@ -194,6 +194,10 @@ public class Client extends Node {
 		sentActionMessages.removeIf(n -> n.getID() == m.getDeniedMessage_id());
 	}
 	
+	public void receivePingMessage(PingMessage m) {
+		sendMessage(new PingMessage(this, serverAddress, server_id));
+	}
+	
 	public void receiveRedirectMessage(RedirectMessage m) {
 		if(state == State.Running)
 			reset();
@@ -202,11 +206,11 @@ public class Client extends Node {
 		server_id = m.getServer_id();
 		serverAddress = Server.ADDRESSES[server_id];
 		changeState(State.Initialization);
-		sendMessage(new InitMessage(this, serverAddress, server_id));
+		int playerId = player == null ? -1 : player.getId();
+		sendMessage(new InitMessage(this, serverAddress, server_id, playerId));
 	}
 	
 	public void receiveData(DataMessage m) {
-		Print("Datamesssage "+m);
 		sentActionMessages.removeIf(n -> n.getID() == m.getActionMessage_id());
 		dataMessageBuffer.add(m);
 		Collections.sort(dataMessageBuffer, 
@@ -223,7 +227,7 @@ public class Client extends Node {
 	
 	public void deliverData(DataMessage m) {
 		synchronized(bf) {
-			Print("Received data: "+m.getData());
+			//Print("Received data: "+m.getData());
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
 				if (u_old != null ) {

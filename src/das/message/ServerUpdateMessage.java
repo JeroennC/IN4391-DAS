@@ -8,8 +8,9 @@ public class ServerUpdateMessage extends Message {
 	
 	private int serverLoad;
 
-	public ServerUpdateMessage(Server from, Address to, String to_id) {
+	public ServerUpdateMessage(Server from, Address to, String to_id, int serverLoad) {
 		super(from, to, to_id);
+		this.setServerLoad(serverLoad);
 	}
 
 	@Override

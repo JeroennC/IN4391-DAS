@@ -5,6 +5,7 @@ import das.message.Address;
 public class ClientConnection extends Connection {
 	private int lastDataMessageSentID;
 	private boolean _canMove;
+	private int unitId;
 	
 	public ClientConnection(Address a) {
 		super(a);
@@ -30,6 +31,14 @@ public class ClientConnection extends Connection {
 
 	public void canMove(boolean _canMove) {
 		this._canMove = _canMove;
+	}
+
+	public int getUnitId() {
+		return unitId;
+	}
+
+	public void setUnitId(int unitId) {
+		this.unitId = unitId;
 	}
 
 	
