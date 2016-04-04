@@ -124,6 +124,9 @@ public class ServerState implements Runnable {
 		}
 		boolean newPlayer = (a instanceof NewPlayer && ((NewPlayer) a).getNewUnit() == null);
 		Data d = new Data();
+		if (newPlayer && this.delay != 0) {
+			Print("Debug");
+		}
 		Unit u = bf.doAction(a);
 		if(a instanceof Heal) 
 			d.updateUnit(bf.getUnit(((Heal) a).getReceiverId()));

@@ -348,7 +348,7 @@ public class Battlefield implements Serializable {
 			Unit newUnit = newPlayer.getNewUnit();
 			if(newUnit == null) {
 				newUnit = createAndPlaceNewPlayer(action.getExecuterId());
-				newPlayer.setNewUnit(newUnit);
+				newPlayer.setNewUnit(newUnit.clone());
 			} else
 					placeUnit(newUnit);
 			return newUnit;
