@@ -60,9 +60,9 @@ public abstract class Message implements Serializable {
 	public void send() {
 		if(from instanceof Server && timestamp == 0)
 			setTimestamp(((Server) from).getTime());
+		from.Print("Sendmessage "+this);
 		if(receiver == null)
 			return;
-		from.Print("Sendmessage "+this);
 		new Thread() {
 			  public void run() { 
 				  try {
@@ -138,7 +138,7 @@ public abstract class Message implements Serializable {
 	
 	@Override
 	public String toString() {
-		return getClass().getName()+ "["+message_id+"]";
+		return getClass().getName()+ "["+message_id+", " + from_id + " > " +receiver_id + "]";
 	}
 
 	@Override

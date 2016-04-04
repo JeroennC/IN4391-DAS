@@ -147,8 +147,11 @@ public class ServerState implements Runnable {
 	 */
 	public void rollback() {
 		// Care, always acquire locks in this order, no deadlocks :)
+		Data d = null;
 		synchronized (inbox) {
 			synchronized (bf) {
+				if(fasterState == null)
+					d = slowerState.bf.difference(bf);
 				bf = slowerState.cloneBattlefield();
 				inbox = slowerState.cloneInbox();
 				nextCommandNr = slowerState.nextCommandNr;
@@ -189,6 +192,8 @@ public class ServerState implements Runnable {
 		// Cascade rollback, otherwise inconsistencies are not found (because the original inconsistency is not processed again)
 		if (fasterState != null) 
 			fasterState.rollback();
+		else if(d != null)
+			server.sendRollback(d);
 	}
 	
 	public long getTime() {
@@ -265,6 +270,12 @@ public class ServerState implements Runnable {
 	public Battlefield cloneBattlefield() {
 		synchronized(bf) {
 			return bf.clone();
+		}
+	}
+	
+	public Data getData() {
+		synchronized (bf) {
+			return bf.getData();
 		}
 	}
 	

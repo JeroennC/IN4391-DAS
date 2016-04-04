@@ -99,42 +99,85 @@ public class Server extends Node {
 	}
 	
 	private void connect() {
-		for(int i=0;i<ADDRESSES.length;i++)
-			if(id != i)
-				sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
-		
-		for(int i=0; i<20; i++) {
-			try { Thread.sleep(100); } catch (InterruptedException e) { }
-		}
-		changeState(State.Initialization);
-		if(getServerConnections().size() == 0) {
-			// Start a new game, being the only server present
-			Battlefield bf = new Battlefield();
-			bf.initialize();
-			for(ServerState ss: trailingStates)
-				ss.init(bf);
-			for(int i = 0; i < trailingStates.length; i++)
-				new Thread(trailingStates[i], this.getName() + "_ts_" + i).start();
-			changeState(State.Running);
-		} else {
-			// Copy state from other server
-			Map<String, ServerConnection> serverConnections = getServerConnections();
-			int copyServerId = ((int)(Math.random() * Integer.MAX_VALUE)) % serverConnections.size();
-			String serverName = (String) serverConnections.keySet().toArray()[copyServerId];
-			Address a = getAddress(serverName);
-			sendMessage(new InitServerMessage(this, a, serverName));
-			//TODO wait for Running, or reset and try other server
-		}
+		do {
+			for(int i=0;i<ADDRESSES.length;i++)
+				if(id != i)
+					sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
+			
+			for(int i=0; i<20; i++) {
+				try { Thread.sleep(100); } catch (InterruptedException e) { }
+			}
+			changeState(State.Initialization);
+			if(getServerConnections().size() == 0) {
+				// Start a new game, being the only server present
+				Battlefield bf = new Battlefield();
+				bf.initialize();
+				for(ServerState ss: trailingStates)
+					ss.init(bf);
+				for(int i = 0; i < trailingStates.length; i++)
+					new Thread(trailingStates[i], this.getName() + "_ts_" + i).start();
+				changeState(State.Running);
+			} else {
+				// Copy state from other server
+				Map<String, ServerConnection> serverConnections = getServerConnections();
+				int copyServerId = ((int)(Math.random() * Integer.MAX_VALUE)) % serverConnections.size();
+				String serverName = (String) serverConnections.keySet().toArray()[copyServerId];
+				Address a = getAddress(serverName);
+				sendMessage(new InitServerMessage(this, a, serverName));
+				while(state != State.Running) {
+					if(!getConnections().containsKey(serverName)) {
+						changeState(State.Disconnected);
+					}
+					try { Thread.sleep(100); } catch (InterruptedException e) { }
+				}
+			}
+		} while(state == State.Disconnected);
 	}
 	
 	public void callPulse() {
 		while(state != State.Exit) {
-			Map<String, ClientConnection> cs = getClientConnections();
-			for(Entry<String, ClientConnection> e: cs.entrySet()) {
-				e.getValue().canMove(true);
-				sendMessage(new PulseMessage(this, e.getValue().getAddress(), e.getKey() ));
+			int serverLoad = getClientConnections().size();
+			for(Entry<String, Connection> e: getConnections().entrySet()) {
+				Connection c = e.getValue();
+				//Send pingMessage when no connection, or disconnect
+				if(c.getLastConnectionTime() + 4*PULSE < getTime() ) {
+					getConnections().remove(e.getKey());
+					continue;
+					//TODO other things to do when node is disconnected?
+				} else if(c.getLastConnectionTime() + 2*PULSE < getTime() ) {
+					sendMessage(new PingMessage(this, c.getAddress(), e.getKey()));
+				}
+				
+				if(c instanceof ClientConnection) {
+					((ClientConnection) c).canMove(true);
+					sendMessage(new PulseMessage(this, c.getAddress(), e.getKey() ));
+				} else {
+					if(((ServerConnection) c).getLastServerStatusTime() + 10*PULSE < getTime()) {
+						sendMessage(new ServerUpdateMessage(this, c.getAddress(), e.getKey(), serverLoad));
+						((ServerConnection) c).setLastServerStatusTime(getTime());
+					}
+				}
 			}
 			try { Thread.sleep(PULSE); } catch (InterruptedException e1) { }
+		}
+	}
+	
+	public void sendRollback(Data data) {
+		sendData(data, null, -1);
+	}
+	
+	private void sendData(Data data, String from, int mid) {
+		Unit player = data.getPlayer();
+		for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
+			int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
+			int am = -1;
+			Data d = (from == null ?  data : data.clone());
+			if(e.getKey().equals(from)) {
+				am = mid;
+				d.setPlayer(player);
+			} else
+				d.setPlayer(null);
+			sendMessage(new DataMessage(this, e.getValue().getAddress(), e.getKey(), d , am, dataId)) ;
 		}
 	}
 	
@@ -150,19 +193,13 @@ public class Server extends Node {
 			Data data = trailingStates[0].receive(commands[0]);
 			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
-			if(fromClient) {
+			if(data != null) {
 				Unit player = data.getPlayer();
-				for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
-					int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
-					int am = -1;
-					Data d = data.clone();
-					if(e.getKey().equals(m.getFrom_id())) {
-						am = m.getID();
-						d.setPlayer(player);
-					} else
-						d.setPlayer(null);
-					sendMessage(new DataMessage(this, e.getValue().getAddress(), e.getKey(), d , am, dataId)) ;
-				}
+				if(player != null && fromClient)
+					getClientConnections().get(m.getFrom_id()).setUnitId(player.getId());
+				sendData(data, m.getFrom_id(), m.getID());
+			}
+			if(fromClient) {
 				for(Entry<String, ServerConnection> e: getServerConnections().entrySet()) {
 					ActionMessage am = new ActionMessage(this, e.getValue().getAddress(), e.getKey(), m.getAction());
 					am.setTimestamp(m.getTimestamp());
@@ -186,25 +223,39 @@ public class Server extends Node {
 	public void receivePingMessage(PingMessage m) {
 		if(m.getFrom_id().startsWith("Client"))
 			sendMessage(new PulseMessage(this, getAddress(m.getFrom_id()), m.getFrom_id()));
-		else
-			sendMessage(new ServerUpdateMessage(this, getAddress(m.getFrom_id()), m.getFrom_id()));
+		else {
+			sendMessage(new ServerUpdateMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), getClientConnections().size()));
+			getServerConnections().get(m.getFrom_id()).setLastServerStatusTime(getTime());
+		}
 	}
 	
 	public void receiveConnectMessage(ConnectMessage m) {
-		//TODO return address of least loaded server
-		sendMessage(new RedirectMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), this.id));
+		int sid = this.id;
+		int least = getClientConnections().size();
+		for(Entry<String, ServerConnection> e: getServerConnections().entrySet()) {
+			if(e.getValue().getServerLoad() < least) {
+				least = e.getValue().getServerLoad();
+				sid = Integer.valueOf(e.getKey().replace("Server_", ""));
+			}
+		}
+		sendMessage(new RedirectMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), sid));
+		if(sid != id)
+			getConnections().remove(m.getFrom_id());
 	}
 	
 	public void receiveInitMessage(InitMessage m) {
 		ClientConnection c = (ClientConnection) getConnections().get(m.getFrom_id());
 		c.setLastMessageSentID(0);
 		c.setLastDataMessageSentID(0);
-		// Create new player
-		int playerId = trailingStates[0].getNextUnitId();
-		receiveActionMessage(new ActionMessage(m, playerId));
-		
-		// Log
-		Log("Initializing client: " + m.getFrom_id());
+		if(m.getPlayerId() == -1) {
+			// Create new player
+			int playerId = trailingStates[0].getNextUnitId();
+			receiveActionMessage(new ActionMessage(m, playerId));
+			
+			// Log
+			Log("Initializing client: " + m.getFrom_id());
+		} else
+			sendData(trailingStates[0].getData(), null, -1);
 	}
 	
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {
@@ -246,15 +297,16 @@ public class Server extends Node {
 				updateTimer(m);
 			ServerConnection c = getServerConnections().get(m.getFrom_id());
 			if(c == null) {
-				c = new ServerConnection( m.getFromAddress());
+				c = new ServerConnection( m.getFromAddress(), getTime());
 				getConnections().put(m.getFrom_id(), c );
 			}
-			c.addAck(m.getID());				
+			c.addAck(m.getID());
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
 			if(!getConnections().containsKey(m.getFrom_id()))
 				getConnections().put(m.getFrom_id(), new ClientConnection( m.getFromAddress()) );
 		}
+		getConnections().get(m.getFrom_id()).setLastConnectionTime(getTime());
 		for(Message n: inbox)
 			if(canReceive(n))
 				n.receive(this);
