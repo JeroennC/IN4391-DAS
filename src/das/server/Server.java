@@ -39,7 +39,7 @@ import das.message.ServerUpdateMessage;
 public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
 	public static final Address[] ADDRESSES = {
-		new Address("localhost", Main.port),
+		new Address("52.58.89.148", Main.port),
 		new Address("52.58.28.19", Main.port),
 		new Address("localhost", Main.port),
 		new Address("localhost", Main.port),

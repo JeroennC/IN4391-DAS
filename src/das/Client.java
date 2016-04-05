@@ -15,6 +15,7 @@ import das.server.Server;
 public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;
 	
+	private int proposed_server_id;
 	//TODO which variables are volatile?
 	private int server_id;
 	private Address serverAddress;
@@ -33,6 +34,15 @@ public class Client extends Node {
 	
 	public Client(int id) throws RemoteException {
 		super(id, "Client_"+id);
+		this.proposed_server_id = -1;
+		sentActionMessages = new LinkedList<ActionMessage>();
+		bf = new Battlefield();
+		reset();
+	}
+	
+	public Client(int id, int proposed_server_id) throws RemoteException {
+		super(id, "Client_"+id);
+		this.proposed_server_id = proposed_server_id;
 		sentActionMessages = new LinkedList<ActionMessage>();
 		bf = new Battlefield();
 		reset();
@@ -138,7 +148,8 @@ public class Client extends Node {
 		reset();
 		server_id = (int) (Math.random() * Server.ADDRESSES.length);
 		// DEV:
-		server_id = 2;
+		server_id = 1;
+		if (proposed_server_id != - 1) server_id = proposed_server_id;
 		serverAddress = Server.ADDRESSES[server_id];
 		Print("Try to connect with server "+(server_id));
 		sendMessage(new ConnectMessage(this, serverAddress, server_id));

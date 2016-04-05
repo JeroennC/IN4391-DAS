@@ -12,8 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import com.sun.jmx.snmp.tasks.ThreadService;
-
 import das.gui.ClientViewer;
 import das.server.Server;
 
@@ -50,15 +48,19 @@ public class Main {
 					// Process input
 					if(sep[0].equals("start")) {
 						int id = Integer.parseInt(sep[2]);
+						int proposed = -1;
 						boolean silent = false;
 						if (sep.length >= 4) {
 							// Additional option
 							if (sep[3].equals("silent") || sep[3].equals("s"))
 								silent = true;
 						}
+						if (sep.length >= 5) {
+							proposed = Integer.parseInt(sep[4]);
+						}
 						if (sep[1].equals("Client") || sep[1].equals("Server")) {
 							if (!isIdActive(sep[1], id))
-								startThread(sep[1], id, silent);
+								startThread(sep[1], id, silent, proposed);
 							else
 								System.out.println(sep[1] + ", id " + id +" already taken.");
 						} 
@@ -109,10 +111,10 @@ public class Main {
 	 * Launch a thread
 	 * @throws RemoteException 
 	 */
-	private static void startThread(String type, int id, boolean isSilent) throws RemoteException {
+	private static void startThread(String type, int id, boolean isSilent, int proposed) throws RemoteException {
 		Node n;
 		if (type.equals("Client")) {
-			n = new Client(id);
+			n = new Client(id, proposed);
 		} else { // Server
 			n = new Server(id);
 		}
