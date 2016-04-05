@@ -51,7 +51,7 @@ public class ServerState implements Runnable {
 		runningThread = Thread.currentThread();
 		state = State.Running;
 		boolean needsRollback;
-		boolean generateRollback = true;
+		boolean generateRollback = false;
 		if(delay == 0) return;
 		while(server.isRunning()) {
 			Thread.interrupted();
@@ -115,18 +115,11 @@ public class ServerState implements Runnable {
 		// Check if action is possible, if not, rollback previous state, and invalidate the commands for later states
 		if (!isPossible(a)) {
 			sc.InvalidateUpwards();
-			if (this.delay == 10000) {
-				Print("Debug");
-				isPossible(a);
-			}
 			Print("Invalid action: " + a.toString());
 			return null;
 		}
 		boolean newPlayer = (a instanceof NewPlayer && ((NewPlayer) a).getNewUnit() == null);
 		Data d = new Data();
-		if (newPlayer && this.delay != 0) {
-			Print("Debug");
-		}
 		Unit u = bf.doAction(a);
 		if(a instanceof Heal) 
 			d.updateUnit(bf.getUnit(((Heal) a).getReceiverId()));

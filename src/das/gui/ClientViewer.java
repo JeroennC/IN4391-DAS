@@ -33,6 +33,7 @@ public class ClientViewer extends JPanel implements Runnable {
 	/* Dimension of the stored image */
 	private int bufferWidth;
 	private int bufferHeight;
+	private boolean running = true;
 
 	/* The thread that is used to make the battlefield run in a separate thread.
 	 * We need to remember this thread to make sure that Java exits cleanly.
@@ -131,6 +132,7 @@ public class ClientViewer extends JPanel implements Runnable {
 
 	public void run() {
 		final Frame f = new Frame();
+		
 		f.addWindowListener(new WindowListener() {
 			public void windowDeactivated(WindowEvent e) {}
 			public void windowDeiconified(WindowEvent e) {}
@@ -140,6 +142,7 @@ public class ClientViewer extends JPanel implements Runnable {
 			public void windowClosed(WindowEvent e) {}
 			public void windowClosing(WindowEvent e) {
 				// What happens if the user closes this window?
+				running = false;
 				f.setVisible(false); // The window becomes invisible
 				client.changeState(das.Node.State.Exit);// And the client stops running
 				f.dispose();
@@ -160,8 +163,11 @@ public class ClientViewer extends JPanel implements Runnable {
 				e.printStackTrace();
 			}
 		}
-
-		System.out.println("This is the end.");
+		
+		if (running) {
+			f.setVisible(false);
+			f.dispose();
+		}
 	}
 	
 	/**
