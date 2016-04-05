@@ -138,7 +138,7 @@ public class Client extends Node {
 		reset();
 		server_id = (int) (Math.random() * Server.ADDRESSES.length);
 		// DEV:
-		server_id = 1;
+		server_id = 2;
 		serverAddress = Server.ADDRESSES[server_id];
 		Print("Try to connect with server "+(server_id));
 		sendMessage(new ConnectMessage(this, serverAddress, server_id));

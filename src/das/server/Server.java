@@ -1,5 +1,6 @@
 package das.server;
 import java.rmi.RemoteException;
+import java.rmi.server.ServerNotActiveException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,7 @@ public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
 	public static final Address[] ADDRESSES = {
 		new Address("localhost", Main.port),
-		new Address("localhost", Main.port),
+		new Address("52.58.28.19", Main.port),
 		new Address("localhost", Main.port),
 		new Address("localhost", Main.port),
 		new Address("localhost", Main.port),
@@ -342,20 +343,28 @@ public class Server extends Node {
 
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
+		Address addr = m.getFromAddress();
+		try {
+			addr.setAddress(getClientHost());
+		} catch (ServerNotActiveException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		Print("Received message: " + m.toString());
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
 			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
 				updateTimer(m);
 			ServerConnection c = getServerConnections().get(m.getFrom_id());
 			if(c == null) {
-				c = new ServerConnection( m.getFromAddress(), getTime());
+				c = new ServerConnection( addr, getTime());
 				getConnections().put(m.getFrom_id(), c );
 			}
 			c.addAck(m.getID());
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
 			if(!getConnections().containsKey(m.getFrom_id()))
-				getConnections().put(m.getFrom_id(), new ClientConnection( m.getFromAddress()) );
+				getConnections().put(m.getFrom_id(), new ClientConnection( addr) );
 		}
 		getConnections().get(m.getFrom_id()).setLastConnectionTime(getTime());
 		for(Message n: inbox)
