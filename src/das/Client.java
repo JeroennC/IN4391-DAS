@@ -76,6 +76,7 @@ public class Client extends Node {
 		Print("Game is over.");
 		stopPulseTimer();
 		close();
+		Main.removeThread(this.getName());
 	}
 	
 	// Synchronized on battlefield so other threads don't mess things up

@@ -161,6 +161,13 @@ public class Main {
 	}
 	
 	/**
+	 * Remove a thread from the pool
+	 */
+	public static void removeThread(String threadName) {
+		nodes.removeIf(nr -> nr.thread.getName().equals(threadName));
+	}
+	
+	/**
 	 * Creates a new registry for remote method invocation, or retrieves it
 	 */
 	public static void setRegistry(){

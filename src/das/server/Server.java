@@ -134,6 +134,7 @@ public class Server extends Node {
 		Log("Shutting down");
 		close();
 		pulse.interrupt();
+		Main.removeThread(this.getName());
 	}
 	
 	private void connect() {
