@@ -280,7 +280,7 @@ public class Client extends Node {
 		this.player = player;
 	}
 	
-	public Battlefield getBattlefield() {
+	public Battlefield getBattlefield() throws RemoteException {
 		return bf;
 	}
 }

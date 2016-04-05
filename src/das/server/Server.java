@@ -475,4 +475,10 @@ public class Server extends Node {
 			}
 		}
 	}
+
+	@Override
+	public Battlefield getBattlefield() throws RemoteException {
+		// TODO maybe just do getBattlefield here?
+		return trailingStates[0].cloneBattlefield();
+	}
 }

@@ -7,13 +7,18 @@ import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.net.MalformedURLException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 
 import javax.swing.JPanel;
 
 import das.Battlefield;
 import das.Client;
+import das.Main;
+import das.Node_RMI;
 import das.Unit;
+import das.server.Server;
 
 /**
  * Viewer based on version from authors below 
@@ -25,7 +30,7 @@ import das.Unit;
  * @author Pieter Anemaet, Boaz Pat-El
  */
 @SuppressWarnings("serial")
-public class ClientViewer extends JPanel implements Runnable {
+public class ServerViewer extends JPanel implements Runnable {
 	/* Double buffered image */
 	private Image doubleBufferImage;
 	/* Double buffered graphics */
@@ -41,28 +46,27 @@ public class ClientViewer extends JPanel implements Runnable {
 	 */
 	private Thread runnerThread;
 	
-	private Client client;
 	private Battlefield bf;
+	private Node_RMI server;
 
 	/**
 	 * Create a battlefield viewer in 
 	 * a new thread. 
 	 */
-	public ClientViewer(int server) {
+	public ServerViewer(int server_id) {
 		doubleBufferGraphics = null;
-		try {
-			client = new Client(-1, server);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-		Thread t = new Thread(client);
-		t.setName("ClientViewer_Client");
-		t.start();
 		
 		runnerThread = new Thread(this);
-		runnerThread.setName("ClientViewer");
+		runnerThread.setName("ServerViewer");
 		runnerThread.start();
+		
 		bf = new Battlefield();
+		
+		try {
+			server = (Node_RMI) java.rmi.Naming.lookup("rmi://" + Server.ADDRESSES[server_id].getAddress() + ":" + Server.ADDRESSES[server_id].getPort() + "/Server_" + server_id);
+		} catch (MalformedURLException | RemoteException | NotBoundException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -86,11 +90,6 @@ public class ClientViewer extends JPanel implements Runnable {
 		double xRatio = (double)this.getWidth() / (double)Battlefield.MAP_WIDTH;
 		double yRatio = (double)this.getHeight() / (double)Battlefield.MAP_HEIGHT;
 		double filler;
-		try {
-			bf = client.getBattlefield();
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
 
 		/* Possibly adjust the double buffer */
 		if(bufferWidth != getSize().width 
@@ -150,7 +149,6 @@ public class ClientViewer extends JPanel implements Runnable {
 				// What happens if the user closes this window?
 				running = false;
 				f.setVisible(false); // The window becomes invisible
-				client.changeState(das.Node.State.Exit);// And the client stops running
 				f.dispose();
 			}
 		});
@@ -159,20 +157,25 @@ public class ClientViewer extends JPanel implements Runnable {
 		f.setSize(1000, 1000);
 		f.setVisible(true);
 		
-		while(client.isRunning()) {		
+		while(running) {		
 			/* Keep the system running on a nice speed */
 			try {
 				Thread.sleep((int)(1000 * .01));
+				updateBattlefield();
 				invalidate();
 				repaint();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-		
-		if (running) {
-			f.setVisible(false);
-			f.dispose();
+	}
+	
+	public void updateBattlefield() {
+		try {
+			bf = server.getBattlefield();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	

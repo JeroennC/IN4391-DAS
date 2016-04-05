@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 import das.gui.ClientViewer;
+import das.gui.ServerViewer;
 import das.server.Server;
 
 @SuppressWarnings("deprecation")
@@ -71,8 +72,16 @@ public class Main {
 					} else if (sep[0].equals("sleep")){
 						int time = Integer.parseInt(sep[1]);
 						Thread.sleep(time);
-					} else if (sep[0].equals("view")) {
-						new ClientViewer();
+					} else if (sep[0].equals("cview")) {
+						int server = 0;
+						if (sep.length >= 2)
+							server = Integer.parseInt(sep[1]);
+						new ClientViewer(server);
+					} else if (sep[0].equals("sview")) {
+						int server = 0;
+						if (sep.length >= 2)
+							server = Integer.parseInt(sep[1]);
+						new ServerViewer(server);
 					} else if (sep[0].equals("exit")) {
 						System.out.println("System exiting..");
 						killRunningThreads();
