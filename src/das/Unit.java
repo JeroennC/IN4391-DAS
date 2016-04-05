@@ -12,7 +12,6 @@ public class Unit implements Serializable {
 	private volatile int hp;
 	private int ap;
 	private int maxHp;
-	private volatile boolean alive = true;
 	
 	// true if human, false if dragon
 	private boolean type;
@@ -72,7 +71,7 @@ public class Unit implements Serializable {
 	@Override
 	public String toString() {
 		return "Unit [id=" + id + ", x=" + x + ", y=" + y + ", hp=" + hp
-				+ ", ap=" + ap + ", maxHp=" + maxHp + ", alive=" + alive
+				+ ", ap=" + ap + ", maxHp=" + maxHp 
 				+ ", type=" + type + "]";
 	}
 
@@ -113,7 +112,7 @@ public class Unit implements Serializable {
 		this.type = !dragon;
 	}
 	public boolean isAlive() {
-		return alive;
+		return this.hp > 0;
 	}
 	public int getId() {
 		return id;
@@ -138,13 +137,11 @@ public class Unit implements Serializable {
 		this.hp -= ap;
 		if (this.hp <= 0) {
 			this.hp = 0;
-			alive = false;
 		}
 	}
 	public Unit clone() {
 		Unit u = new Unit();
 		
-		u.alive = this.alive;
 		u.ap = this.ap;
 		u.hp = this.hp;
 		u.id = this.id;

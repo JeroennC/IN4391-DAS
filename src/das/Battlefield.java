@@ -198,11 +198,10 @@ public class Battlefield implements Serializable {
 	}
 	
 	public void killUnit(Unit unit) {
+		unit.setHp(0);
 		map[unit.getX()][unit.getY()] = null;
 		if (!unit.isType()) dragonCount--;
 		unitList.removeIf(u -> u.equals(unit));
-		
-		// TODO how does a server get this message to the clients?
 	}
 	
 	public boolean isOccupied(int x, int y) {

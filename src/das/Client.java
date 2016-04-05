@@ -227,7 +227,7 @@ public class Client extends Node {
 	
 	public void deliverData(DataMessage m) {
 		synchronized(bf) {
-			//Print("Received data: "+m.getData());
+			Print("Received data: "+m.getData());
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
 				if (u_old != null ) {
@@ -243,6 +243,8 @@ public class Client extends Node {
 				Unit u = bf.getUnit(id);
 				if(u != null)
 					bf.killUnit(u);
+				if (!player.isAlive())
+					changeState(State.Exit);
 			}
 				
 		}
