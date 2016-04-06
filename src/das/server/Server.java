@@ -40,8 +40,8 @@ import das.message.ServerUpdateMessage;
 public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
 	public static final Address[] ADDRESSES = {
-		new Address("52.58.89.148", Main.port),
-		new Address("52.58.28.19", Main.port),
+		new Address("localhost", Main.port),
+		new Address("localhost", Main.port),
 		new Address("localhost", Main.port),
 		new Address("localhost", Main.port),
 		new Address("localhost", Main.port),
@@ -102,25 +102,24 @@ public class Server extends Node {
 				synchronized(dragonControl) {
 					Battlefield bf = trailingStates[0].getBattlefield();
 					synchronized(bf) {
-						bf.getUnitList()
-							.parallelStream()
-							.filter(u -> 
-								{ return u.isDragon() && u.getId() % serversRunning == position; }
-							).forEach(dragon -> {
-								Unit target = bf.getClosestPlayer(dragon);
-								long lastTime = 0;
-								long newTime;
-								if (target != null) {
-									// Attack
-									Printf("Dragon %d attacking player %d", dragon.getId(), target.getId());
-									ActionMessage am = new ActionMessage(this, new Hit(dragon.getId(), target.getId()));
-									newTime = this.getTime();
-									if (newTime == lastTime)
-										newTime++;
-									am.setTimestamp(newTime);
-									messages.add(am);
-								}
-							});
+						for(Unit dragon: bf.getUnitList()) { 
+							if( ! ( dragon.isDragon() && dragon.getId() % serversRunning == position))
+								continue;
+							Unit target = bf.getClosestPlayer(dragon);
+							long lastTime = 0;
+							long newTime;
+							if (target != null) {
+								// Attack
+								Printf("Dragon %d attacking player %d", dragon.getId(), target.getId());
+								ActionMessage am = new ActionMessage(this, new Hit(dragon.getId(), target.getId()));
+								newTime = this.getTime();
+								if (newTime <= lastTime)
+									newTime = lastTime + 1;
+								lastTime = newTime;
+								am.setTimestamp(newTime);
+								messages.add(am);
+							}
+						}
 					}
 					for (ActionMessage am : messages)
 						receiveActionMessage(am);
@@ -249,7 +248,6 @@ public class Server extends Node {
 					getClientConnections().get(m.getFrom_id()).setUnitId(player.getId());
 				sendData(data, m.getFrom_id(), m.getID());
 			}
-			// TODO Should this not always send?
 			if(fromClient || fromMyself) {
 				for(Entry<String, ServerConnection> e: getServerConnections().entrySet()) {
 					ActionMessage am = new ActionMessage(this, e.getValue().getAddress(), e.getKey(), m.getAction());
@@ -259,7 +257,6 @@ public class Server extends Node {
 			}
 		} else if(fromClient) {
 			DenyMessage dm = new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID());
-			dm.setTimestamp(m.getTimestamp());
 			sendMessage(dm);
 		}
 	}
