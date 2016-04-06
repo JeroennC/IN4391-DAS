@@ -55,11 +55,7 @@ public class ServerViewer extends JPanel implements Runnable {
 	 */
 	public ServerViewer(int server_id) {
 		doubleBufferGraphics = null;
-		
-		runnerThread = new Thread(this);
-		runnerThread.setName("ServerViewer");
-		runnerThread.start();
-		
+
 		bf = new Battlefield();
 		
 		try {
@@ -67,6 +63,10 @@ public class ServerViewer extends JPanel implements Runnable {
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
 			e.printStackTrace();
 		}
+		
+		runnerThread = new Thread(this);
+		runnerThread.setName("ServerViewer");
+		runnerThread.start();
 	}
 
 	/**

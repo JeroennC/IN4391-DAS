@@ -225,7 +225,7 @@ public class Server extends Node {
 	
 	public void receiveActionMessage(ActionMessage m) {
 		boolean fromClient = m.getFrom_id().startsWith("Client");
-		boolean fromMyself = m.getFrom_id().equals(this.getName());
+		//boolean fromMyself = m.getFrom_id().equals(this.getName());
 		if(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction()))) {
 			if(fromClient)
 				getClientConnections().get(m.getFrom_id()).canMove(false);
@@ -234,11 +234,6 @@ public class Server extends Node {
 			for(int i = 0; i < TSS_DELAYS.length; i++) 
 				commands[i] = new StateCommand(commands, i, m);
 			Data data = trailingStates[0].receive(commands[0]);
-			if (data == null) {
-				if (!fromMyself)
-					sendMessage(new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID()));
-				return;
-			}
 			for(int i = 1; i < TSS_DELAYS.length; i++)
 				trailingStates[i].receive(commands[i]);
 			if(data != null) {
