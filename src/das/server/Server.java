@@ -225,7 +225,7 @@ public class Server extends Node {
 	
 	public void receiveActionMessage(ActionMessage m) {
 		boolean fromClient = m.getFrom_id().startsWith("Client");
-		//boolean fromMyself = m.getFrom_id().equals(this.getName());
+		boolean fromMyself = m.getFrom_id().equals(this.getName());
 		if(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction()))) {
 			if(fromClient)
 				getClientConnections().get(m.getFrom_id()).canMove(false);
@@ -243,7 +243,7 @@ public class Server extends Node {
 				sendData(data, m.getFrom_id(), m.getID());
 			}
 			// TODO Should this not always send?
-			if(fromClient) {
+			if(fromClient || fromMyself) {
 				for(Entry<String, ServerConnection> e: getServerConnections().entrySet()) {
 					ActionMessage am = new ActionMessage(this, e.getValue().getAddress(), e.getKey(), m.getAction());
 					am.setTimestamp(m.getTimestamp());
