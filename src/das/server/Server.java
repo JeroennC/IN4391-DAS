@@ -15,6 +15,7 @@ import das.Main;
 import das.Node;
 import das.Unit;
 import das.action.Hit;
+import das.action.NewPlayer;
 import das.log.LogEntry;
 import das.log.LogSender;
 import das.message.ActionMessage;
@@ -107,11 +108,16 @@ public class Server extends Node {
 								{ return u.isDragon() && u.getId() % serversRunning == position; }
 							).forEach(dragon -> {
 								Unit target = bf.getClosestPlayer(dragon);
+								long lastTime = 0;
+								long newTime;
 								if (target != null) {
 									// Attack
 									Printf("Dragon %d attacking player %d", dragon.getId(), target.getId());
 									ActionMessage am = new ActionMessage(this, new Hit(dragon.getId(), target.getId()));
-									am.setTimestamp(this.getTime());
+									newTime = this.getTime();
+									if (newTime == lastTime)
+										newTime++;
+									am.setTimestamp(newTime);
 									messages.add(am);
 								}
 							});
@@ -226,7 +232,8 @@ public class Server extends Node {
 	public void receiveActionMessage(ActionMessage m) {
 		boolean fromClient = m.getFrom_id().startsWith("Client");
 		boolean fromMyself = m.getFrom_id().equals(this.getName());
-		if(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction()))) {
+		//boolean first = (m.getAction() instanceof NewPlayer);
+		if(/*first && */(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())))) {
 			if(fromClient)
 				getClientConnections().get(m.getFrom_id()).canMove(false);
 			// Create linked StateCommands
@@ -251,7 +258,9 @@ public class Server extends Node {
 				}
 			}
 		} else if(fromClient) {
-			sendMessage(new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID()));
+			DenyMessage dm = new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID());
+			dm.setTimestamp(m.getTimestamp());
+			sendMessage(dm);
 		}
 	}
 	

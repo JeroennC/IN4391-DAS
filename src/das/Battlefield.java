@@ -17,12 +17,14 @@ public class Battlefield implements Serializable {
 	public static final int INITIAL_DRAGON_COUNT = 20;
 	private Unit[][] map;
 	private List<Unit> unitList;
+	private List<Unit> deletedUnits;
 	private int dragonCount;
 	private int highestUnitId;
 	
 	public Battlefield() {
 		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
 		unitList = new ArrayList<Unit>();
+		deletedUnits = new LinkedList<Unit>();
 		dragonCount = 0;
 		highestUnitId = 0;
 	}
@@ -30,6 +32,7 @@ public class Battlefield implements Serializable {
 	public void initialize() {
 		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
 		unitList = new ArrayList<Unit>();
+		deletedUnits = new LinkedList<Unit>();
 		dragonCount = 0;
 		highestUnitId = 0;
 		
@@ -38,7 +41,7 @@ public class Battlefield implements Serializable {
 		boolean placed;
 		for (int i = 0; i < INITIAL_DRAGON_COUNT; i++) {
 			int hp = rand.nextInt(51) + 50;
-			int ap = rand.nextInt(16) + 5;
+			int ap = 2;//rand.nextInt(16) + 5;
 			placed = false;
 			// 20 tries of placement
 			for (int j = 0; j < 20; j++ ){
@@ -137,6 +140,7 @@ public class Battlefield implements Serializable {
 		u_active.setHp(u_new.getHp());
 		u_active.setX(u_new.getX());
 		u_active.setY(u_new.getY());
+		u_active.setTimestamp(u_new.getTimestamp());
 		map[u_active.getX()][u_active.getY()] = u_active;
 	}
 	
@@ -144,6 +148,7 @@ public class Battlefield implements Serializable {
 		map[u.getX()][u.getY()] = u;
 		if (!u.isType()) dragonCount++;
 		unitList.add(u);
+		deletedUnits.removeIf(unit -> u.equals(unit));
 		
 		if (u.getId() >= highestUnitId) {
 			highestUnitId = u.getId() + 1;
@@ -198,10 +203,13 @@ public class Battlefield implements Serializable {
 	}
 	
 	public void killUnit(Unit unit) {
-		unit.setHp(0);
+		if (unit.getHp() > 0)
+			unit.setHp(0);
 		map[unit.getX()][unit.getY()] = null;
 		if (!unit.isType()) dragonCount--;
 		unitList.removeIf(u -> u.equals(unit));
+		deletedUnits.removeIf(u -> u.equals(unit));
+		deletedUnits.add(unit);
 	}
 	
 	public boolean isOccupied(int x, int y) {
@@ -409,5 +417,13 @@ public class Battlefield implements Serializable {
 		Data d = new Data();
 		d.setUpdatedUnits(unitList);
 		return d;
+	}
+	
+	public Unit getDeletedUnit(int unit_id) {
+		for (Unit u : deletedUnits)
+			if (u.equals(unit_id))
+				return u;
+		
+		return null;
 	}
 }

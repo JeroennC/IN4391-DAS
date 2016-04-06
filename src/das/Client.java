@@ -24,6 +24,8 @@ public class Client extends Node {
 	private List<Message> sentMessages;
 	private List<DataMessage> dataMessageBuffer;
 	private List<ActionMessage> sentActionMessages;
+	private ActionMessage lastActionMessage;
+	private Object lastActionAccess;
 	private int lastMessageSentID;
 	private int expectedDataMessageID;
 	private int expectedMessageID;
@@ -55,6 +57,8 @@ public class Client extends Node {
 		changeState(State.Disconnected);
 		sentMessages = new LinkedList<Message>();
 		dataMessageBuffer = new LinkedList<DataMessage>();
+		lastActionMessage = null;
+		lastActionAccess = new Object();
 		expectedDataMessageID = 0;
 		expectedMessageID = 0;
 		lastMessageSentID = 0;
@@ -75,8 +79,12 @@ public class Client extends Node {
 			} else if(state == State.Running && _canMove) {
 				if (player != null) {
 					Action a = doMove();
-					if(a != null)
-						sendMessage(new ActionMessage(this, serverAddress, server_id, a));
+					if(a != null) {
+						synchronized(lastActionAccess) {
+							lastActionMessage = new ActionMessage(this, serverAddress, server_id, a);
+						}
+						sendMessage(lastActionMessage);
+					}
 				}
 			} 
 			// TODO sleep for a little time? Busy waiting is a bit much
@@ -202,8 +210,78 @@ public class Client extends Node {
 		}
 	}
 	
-	public void receiveDenial(DenyMessage m) {
-		sentActionMessages.removeIf(n -> n.getID() == m.getDeniedMessage_id());
+	public void receiveDenial(DenyMessage dm) {
+		sentActionMessages.removeIf(n -> n.getID() == dm.getDeniedMessage_id());
+		boolean reinit = false;
+		synchronized(lastActionAccess) {
+			if (lastActionMessage != null && lastActionMessage.getID() == dm.getDeniedMessage_id()) {
+				// Undo last performed action
+				if (player.isAlive()) {
+					Action a = lastActionMessage.getAction();
+					synchronized(bf) {
+						// Only if player is still alive, otherwise this could be the cause of denial
+						if (a instanceof Move) {
+							MoveType m = ((Move) a).getMoveType();
+							switch (m) {
+							case Left:
+								m = MoveType.Right;
+								break;
+							case Right:
+								m = MoveType.Left;
+								break;
+							case Up:
+								m = MoveType.Down;
+								break;
+							case Down:
+								m = MoveType.Up;
+								break;
+							}
+							if (player.getTimestamp() < dm.getTimestamp()) {
+								bf.moveUnit(player, m);
+							}
+						} else if (a instanceof Hit) {
+							Unit receiver = bf.getUnit(((Hit) a).getReceiverId());
+							if (receiver == null) {
+								// Unit is gone, check when it was last updated by the server
+								receiver = bf.getDeletedUnit(((Hit) a).getReceiverId());
+								if (receiver == null) {
+									reinit = true;
+								} else {
+									if (receiver.getTimestamp() < dm.getTimestamp()) {
+										// Server hasn't changed this unit since my action, so i must have deleted it
+										receiver.setHp(receiver.getHp() + player.getAp());
+										bf.placeUnit(receiver);
+									}
+								}
+							} else {
+								// Replenish health
+								if (receiver.getTimestamp() < dm.getTimestamp()) {
+									receiver.setHp(receiver.getHp() + player.getAp());
+								}
+							}
+						} else if (a instanceof Heal) {
+							Unit receiver = bf.getUnit(((Heal) a).getReceiverId());
+							if (receiver != null) {
+								// Undo healing
+								if (receiver.getTimestamp() < dm.getTimestamp()) {
+									receiver.setHp(receiver.getHp() - player.getAp());
+								}
+							}
+						} else {
+							reinit = true;
+						}
+					}
+				}
+			} else {
+				reinit = true;
+			}
+			// Last action was denied, can move!
+			_canMove = true;
+		}
+		if (reinit) {
+			// TODO Unexpected denial, request re-initialization
+			Print("!!!!! Reinit should happen");
+		}
 	}
 	
 	public void receivePingMessage(PingMessage m) {
@@ -242,6 +320,7 @@ public class Client extends Node {
 			Print("Received data: "+m.getData());
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
+				u_new.setTimestamp(m.getTimestamp());
 				if (u_old != null ) {
 					bf.updateUnit(u_old, u_new);
 				} else {
@@ -253,11 +332,13 @@ public class Client extends Node {
 			}
 			for(Integer id: m.getData().getDeletedUnits()) {
 				Unit u = bf.getUnit(id);
-				if(u != null)
+				if(u != null) {
+					u.setTimestamp(m.getTimestamp());
 					bf.killUnit(u);
-				if (!player.isAlive())
-					changeState(State.Exit);
+				}
 			}
+			if (!player.isAlive())
+				changeState(State.Exit);
 				
 		}
 		if(state == State.Initialization) {

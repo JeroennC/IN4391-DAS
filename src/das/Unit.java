@@ -12,6 +12,7 @@ public class Unit implements Serializable {
 	private volatile int hp;
 	private int ap;
 	private int maxHp;
+	private long lastServerTimestamp;
 	
 	// true if human, false if dragon
 	private boolean type;
@@ -135,9 +136,12 @@ public class Unit implements Serializable {
 	}
 	public void hurt(int ap) {
 		this.hp -= ap;
-		if (this.hp <= 0) {
-			this.hp = 0;
-		}
+	}
+	public long getTimestamp() {
+		return this.lastServerTimestamp;
+	}
+	public void setTimestamp(long ts) {
+		this.lastServerTimestamp = ts;
 	}
 	public Unit clone() {
 		Unit u = new Unit();
