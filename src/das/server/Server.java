@@ -164,8 +164,10 @@ public class Server extends Node {
 				bf.initialize();
 				for(ServerState ss: trailingStates)
 					ss.init(bf);
-				for(int i = 0; i < trailingStates.length; i++)
+				for(int i = 0; i < trailingStates.length; i++) {
 					new Thread(trailingStates[i], this.getName() + "_ts_" + i).start();
+					while(trailingStates[i].getState() != ServerState.State.Running);
+				}
 				changeState(State.Running);
 			} else {
 				// Copy state from other server
@@ -203,10 +205,21 @@ public class Server extends Node {
 					((ClientConnection) c).canMove(true);
 					sendMessage(new PulseMessage(this, c.getAddress(), e.getKey() ));
 				} else {
-					if(((ServerConnection) c).getLastServerStatusTime() + 10*PULSE < getTime()) {
+					ServerConnection sc = (ServerConnection) c; 
+					if(sc.getLastServerStatusTime() + 10*PULSE < getTime()) {
 						sendMessage(new ServerUpdateMessage(this, c.getAddress(), e.getKey(), serverLoad));
-						((ServerConnection) c).setLastServerStatusTime(getTime());
+						sc.setLastServerStatusTime(getTime());
 					}
+					//Client forwarding to other server
+					/*if(sc.getServerLoad() < serverLoad && serverLoad > 0) {
+						int sid = Integer.valueOf(e.getKey().replace("Server_",""));
+						String name = (String) getClientConnections().keySet().toArray()[0];
+						sendMessage(new RedirectMessage(this, getAddress(name), name, sid ));
+						getConnections().remove(name);
+						sc.setServerLoad(sc.getServerLoad() + 1);
+						serverLoad--;
+					}*/
+					
 				}
 			}
 			this.canMove = true;
@@ -233,7 +246,7 @@ public class Server extends Node {
 		}
 	}
 	
-	public void receiveActionMessage(ActionMessage m) {
+	public synchronized void receiveActionMessage(ActionMessage m) {
 		boolean fromClient = m.getFrom_id().startsWith("Client");
 		boolean fromMyself = m.getFrom_id().equals(this.getName());
 		//boolean first = (m.getAction() instanceof NewPlayer);
@@ -261,8 +274,9 @@ public class Server extends Node {
 				}
 			}
 		} else if(fromClient) {
-			DenyMessage dm = new DenyMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), m.getID());
-			sendMessage(dm);
+			Data d = trailingStates[0].getDeniedData(m.getAction());
+			int dm_id = getClientConnections().get(m.getFrom_id()).incrementLastDataMessageSentID();
+			sendMessage(new DataMessage(this, m.getFromAddress(), m.getFrom_id(), d, m.getID(),  dm_id));
 		}
 	}
 	
@@ -286,16 +300,20 @@ public class Server extends Node {
 	
 	public void receiveConnectMessage(ConnectMessage m) {
 		int sid = this.id;
+		String name = this.getName();
 		int least = getClientConnections().size();
 		for(Entry<String, ServerConnection> e: getServerConnections().entrySet()) {
 			if(e.getValue().getServerLoad() < least) {
 				least = e.getValue().getServerLoad();
-				sid = Integer.valueOf(e.getKey().replace("Server_", ""));
+				name = e.getKey();
+				sid = Integer.valueOf(name.replace("Server_", ""));
 			}
 		}
 		sendMessage(new RedirectMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), sid));
-		if(sid != id)
+		if(sid != id) {
 			getConnections().remove(m.getFrom_id());
+			getServerConnections().get(name).setServerLoad(least + 1);
+		}
 	}
 	
 	public void receiveInitMessage(InitMessage m) {
@@ -340,8 +358,10 @@ public class Server extends Node {
 		
 		for(ServerState ss: trailingStates)
 			ss.init(m.getBf());
-		for(int i = 0; i < trailingStates.length; i++)
+		for(int i = 0; i < trailingStates.length; i++){
 			new Thread(trailingStates[i], this.getName() + "_ts_" + i).start();
+			while(trailingStates[i].getState() != ServerState.State.Running);
+		}
 		for(int i=0;i<TSS_DELAYS.length;i++)
 			for(StateCommand sc: m.getInbox())
 				trailingStates[i].receive(sc);
@@ -372,8 +392,12 @@ public class Server extends Node {
 			c.addAck(m.getID());
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
-			if(!getConnections().containsKey(m.getFrom_id()))
-				getConnections().put(m.getFrom_id(), new ClientConnection( addr) );
+			if(!getConnections().containsKey(m.getFrom_id())) {
+				if(m instanceof ConnectMessage || m instanceof InitMessage)
+					getConnections().put(m.getFrom_id(), new ClientConnection( addr) );
+				else 
+					return;
+			}
 		}
 		getConnections().get(m.getFrom_id()).setLastConnectionTime(getTime());
 		for(Message n: inbox)

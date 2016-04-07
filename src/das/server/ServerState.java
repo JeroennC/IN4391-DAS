@@ -13,6 +13,7 @@ import das.action.Action;
 import das.action.Heal;
 import das.action.Hit;
 import das.action.Move;
+import das.action.MoveType;
 import das.action.NewPlayer;
 import das.message.Data;
 
@@ -25,7 +26,7 @@ public class ServerState implements Runnable {
 	private long nextCommandNr;
 	private Queue<StateCommand> inbox;
 	private volatile State state;
-	private enum State {Start, Running, Inconsistent, Exit};
+	public enum State {Start, Running, Inconsistent, Exit};
 	private Thread runningThread;
 	private static Comparator<StateCommand> comparator = (Comparator<StateCommand> & Serializable)((StateCommand m1, StateCommand m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
 	private long lastExecutedTime;
@@ -35,7 +36,7 @@ public class ServerState implements Runnable {
 		this.server = server;
 		this.delay = delay;
 		bf = new Battlefield();
-		this.state = State.Start;
+		this.setState(State.Start);
 		nextCommandNr = 0;
 		lastExecutedTime = 0;
 		inbox = new PriorityQueue<StateCommand>(1, comparator);
@@ -49,7 +50,7 @@ public class ServerState implements Runnable {
 	@Override
 	public void run() {
 		runningThread = Thread.currentThread();
-		state = State.Running;
+		setState(State.Running);
 		boolean needsRollback;
 		boolean generateRollback = false;
 		if(delay == 0) return;
@@ -285,5 +286,42 @@ public class ServerState implements Runnable {
 	
 	public void Print(String print) {
 		server.Print(print + " / "+delay);
+	}
+
+	public State getState() {
+		return state;
+	}
+
+	public void setState(State state) {
+		this.state = state;
+	}
+
+	public Data getDeniedData(Action action) {
+		Data d = new Data();
+		synchronized(bf) {
+			Unit u = bf.getUnit(action.getExecuterId());
+			if(u == null)
+				d.deleteUnit(action.getExecuterId());
+			else {
+				d.updateUnit(u);
+				if(action instanceof Heal || action instanceof Hit) { 
+					int rid = action instanceof Heal ? ((Heal) action).getReceiverId() : ((Hit) action).getReceiverId();
+					Unit u2 = bf.getUnit(rid);
+					if(u2 == null)
+						d.deleteUnit(rid);
+					else
+						d.updateUnit(u2);
+				} else if (action instanceof Move ) {
+					for(int dx=-1;dx<=1;dx++)
+						for(int dy=-1;dy<=1;dy++) {
+							int x = u.getX() + dx;
+							int y = u.getY() + dy;
+							if(bf.inBounds(x, y) && bf.getUnit(x, y) != null)
+								d.updateUnit(bf.getUnit(x,y));
+						}
+				}
+			}
+		}
+		return d;
 	}
 }
