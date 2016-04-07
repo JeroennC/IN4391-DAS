@@ -167,7 +167,10 @@ public class Client extends Node {
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
-		if (m.getID() > expectedMessageID) {
+		/*if (m.getID() > expectedMessageID + 20) {
+			connect();
+			return;
+		} else if (m.getID() > expectedMessageID) {
 			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
 			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedMessageID, m.getID() - 1));
 			receivedPastExpected.add(m.getID());
@@ -179,7 +182,7 @@ public class Client extends Node {
 		} else
 			return;
 		if(receivedPastExpected.contains(m.getID()))
-			return;
+			return;*/
 		m.receive(this);		
 	}
 	
