@@ -1,4 +1,8 @@
 package das.server;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.rmi.RemoteException;
 import java.rmi.server.ServerNotActiveException;
 import java.util.LinkedList;
@@ -78,6 +82,7 @@ public class Server extends Node {
 		inbox = new PriorityQueue<Message>(1, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
 		
 		dragonControl = new Object();
+		InitLog();
 		logSender = new LogSender(this);
 		new Thread(logSender, this.getId() + "_LogSender").start();
 		
@@ -93,7 +98,7 @@ public class Server extends Node {
 
 	@Override
 	public void run() {
-		Log("Initializing");
+		Log("Server initializing");
 		connect();
 		while(state != State.Exit) {
 			// Dragon control
@@ -323,13 +328,15 @@ public class Server extends Node {
 		Battlefield bf = trailingStates[TSS_DELAYS.length-1].cloneBattlefield();
 		Queue<StateCommand> inbox = trailingStates[TSS_DELAYS.length-1].cloneInbox();
 		ServerStartDataMessage m = new ServerStartDataMessage(
-				this, initServerMessage.getFromAddress(), initServerMessage.getFrom_id(), bf, inbox, getTime());
+				this, initServerMessage.getFromAddress(), initServerMessage.getFrom_id(), bf, inbox, getLogContent(), getTime());
 		sendMessage(m);
 	}
 	
 	public void receiveServerStartDataMessage(ServerStartDataMessage m) {
 		updateDeltaTime(m.getTime() - getTime());
 		updateServerPositioning();
+		
+		this.printLogContent(m.getLog());
 		
 		for(ServerState ss: trailingStates)
 			ss.init(m.getBf());
@@ -446,6 +453,15 @@ public class Server extends Node {
 	/* Logging */
 	private LogSender logSender;
 	
+	public void InitLog() {
+		try {
+			Files.deleteIfExists(Paths.get(Server.LOG_DIR + "/" + this.getName() + ".txt"));
+			new LogEntry(this.getName(), "Log created", this.getTime()).WriteToFile(this.getName() + ".txt");;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public void Log(String content) {
 		LogEntry e = new LogEntry(this.getName(), content, this.getTime());
 		e.WriteToFile(this.getName() + ".txt");
@@ -461,6 +477,27 @@ public class Server extends Node {
 		Map<String, ServerConnection> cs = getServerConnections();
 		for(Entry<String, ServerConnection> e: cs.entrySet()) {
 			sendMessage(new LogMessage(this, e.getValue().getAddress(), e.getKey(), logs));
+		}
+	}
+	
+	public List<String> getLogContent() {
+		List<String> result = new LinkedList<String>();
+		try {
+			result = Files.readAllLines(Paths.get(Server.LOG_DIR + "/" + this.getName() + ".txt"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return result;
+	}
+	
+	public void printLogContent(List<String> log) {
+		for (String str : log) {
+			try {
+				Files.write(Paths.get(Server.LOG_DIR + "/" + this.getName() + ".txt"), (str + "\n").getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	

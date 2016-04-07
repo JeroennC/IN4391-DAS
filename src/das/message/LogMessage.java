@@ -3,7 +3,6 @@ package das.message;
 import java.util.LinkedList;
 import java.util.List;
 
-import das.Client;
 import das.Node_RMI;
 import das.log.LogEntry;
 import das.server.Server;

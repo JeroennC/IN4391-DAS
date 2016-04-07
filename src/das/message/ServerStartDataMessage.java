@@ -1,5 +1,6 @@
 package das.message;
 
+import java.util.List;
 import java.util.Queue;
 
 import das.Battlefield;
@@ -13,12 +14,14 @@ public class ServerStartDataMessage extends Message {
 	
 	Battlefield bf;
 	Queue<StateCommand> inbox;
+	List<String> log;
 	long time;
 	
-	public ServerStartDataMessage(Node from, Address to, String to_id, Battlefield bf, Queue<StateCommand> inbox, long time) {
+	public ServerStartDataMessage(Node from, Address to, String to_id, Battlefield bf, Queue<StateCommand> inbox, List<String> log, long time) {
 		super(from, to, to_id);
 		this.bf = bf;
 		this.inbox = inbox;
+		this.log = log;
 		this.time = time;
 	}	
 	
@@ -50,6 +53,14 @@ public class ServerStartDataMessage extends Message {
 
 	public void setTime(long time) {
 		this.time = time;
+	}
+	
+	public List<String> getLog() {
+		return log;
+	}
+	
+	public void setLog(List<String> log) {
+		this.log = log;
 	}
 	
 
