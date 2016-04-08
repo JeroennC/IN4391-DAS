@@ -59,7 +59,7 @@ public class ServerViewer extends JPanel implements Runnable {
 		bf = new Battlefield();
 		
 		try {
-			server = (Node_RMI) java.rmi.Naming.lookup("rmi://" + Server.ADDRESSES[server_id].getAddress() + ":" + Server.ADDRESSES[server_id].getPort() + "/Server_" + server_id);
+			server = (Node_RMI) java.rmi.Naming.lookup("rmi://" + Main.ADDRESSES.get(server_id).getAddress() + ":" + Main.ADDRESSES.get(server_id).getPort() + "/Server_" + server_id);
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
 			e.printStackTrace();
 		}

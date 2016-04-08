@@ -44,13 +44,6 @@ import das.message.ServerUpdateMessage;
 
 public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
-	public static final Address[] ADDRESSES = {
-		new Address("localhost", Main.port),
-		new Address("localhost", Main.port),
-		new Address("localhost", Main.port),
-		new Address("localhost", Main.port),
-		new Address("localhost", Main.port),
-		}; //TODO temporal solution, Addresses can also be read from a file
 	public static final int PULSE = 1000;//ms
 	public static final String LOG_DIR = "log";
 	private static final int[] TSS_DELAYS = {0, 200, 500, 1000, 10000};
@@ -151,9 +144,9 @@ public class Server extends Node {
 	
 	private void connect() {
 		do {
-			for(int i=0;i<ADDRESSES.length;i++)
-				if(id != i)
-					sendMessage(new PingMessage(this, ADDRESSES[i], "Server_"+i));
+			for(int i=0;i<Main.ADDRESSES.size();i++)
+				if(id != i && Main.ADDRESSES.get(i) != null)
+					sendMessage(new PingMessage(this, Main.ADDRESSES.get(i), "Server_"+i));
 			
 			for(int i=0; i<20; i++) {
 				try { Thread.sleep(100); } catch (InterruptedException e) { }

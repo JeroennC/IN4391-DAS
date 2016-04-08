@@ -165,11 +165,11 @@ public class Client extends Node {
 	
 	public void connect() {
 		reset();
-		server_id = (int) (Math.random() * Server.ADDRESSES.length);
+		server_id = (int) (Math.random() * Main.ADDRESSES.size());
 		// DEV:
 		server_id = 1;
 		if (proposed_server_id != - 1) server_id = proposed_server_id;
-		serverAddress = Server.ADDRESSES[server_id];
+		serverAddress = Main.ADDRESSES.get(server_id);
 		Print("Try to connect with server "+(server_id));
 		sendMessage(new ConnectMessage(this, serverAddress, server_id));
 		resetPulseTimer();
@@ -309,7 +309,7 @@ public class Client extends Node {
 		expectedMessageID = 0;
 		Print("Change server id from "+server_id +" to "+m.getServer_id());
 		server_id = m.getServer_id();
-		serverAddress = Server.ADDRESSES[server_id];
+		serverAddress = Main.ADDRESSES.get(server_id);
 		changeState(State.Initialization);
 		int playerId = player == null ? -1 : player.getId();
 		sendMessage(new InitMessage(this, serverAddress, server_id, playerId));

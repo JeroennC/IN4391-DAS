@@ -3,6 +3,8 @@ package das;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.rmi.NotBoundException;
 import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
@@ -14,6 +16,7 @@ import java.util.Set;
 
 import das.gui.ClientViewer;
 import das.gui.ServerViewer;
+import das.message.Address;
 import das.server.Server;
 
 @SuppressWarnings("deprecation")
@@ -31,8 +34,32 @@ public class Main {
 	private static Registry registry;
 	public static int port = 1103;
 	private static List<NodeRef> nodes;
+	public static List<Address> ADDRESSES;
 	
-	public static void main(String[] args) {		
+	public static void main(String[] args) {
+		// Read addresses
+		ADDRESSES = new ArrayList<Address>();
+		// Default
+		List<String> addresses = new ArrayList<String>();
+		addresses.add("0,localhost");
+		addresses.add("1,localhost");
+		addresses.add("2,localhost");
+		addresses.add("3,localhost");
+		addresses.add("4,localhost");
+		// Read file
+		if (args.length > 0) {
+			try {
+				addresses = Files.readAllLines(Paths.get("config/" + args[0]));
+			} catch (IOException e1) {
+				System.err.println("Could not load config file, 5 servers on localhost");
+			}
+		}
+		for(String a : addresses) {
+			String[] ainf = a.split(",");
+			ADDRESSES.add(Integer.parseInt(ainf[0]), new Address(ainf[1], Main.port));
+		}
+		
+		
 		setRegistry();
 		
 		// Initialize
