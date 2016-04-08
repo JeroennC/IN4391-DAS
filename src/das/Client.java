@@ -74,6 +74,7 @@ public class Client extends Node {
 		
 		connect();
 		
+		int it = 0;
 		// Start main loop
 		while(state != State.Exit) {
 			if(state == State.Disconnected) {
@@ -88,15 +89,20 @@ public class Client extends Node {
 						sendMessage(lastActionMessage);
 					}
 				}
-				// Request old units
-				List<Unit> requestUnits = new LinkedList<Unit>();
-				for (Unit u : bf.getUnitList()) {
-					if (u.getTimestamp() < lastTimestamp - EXPIRATION_TIME) {
-						requestUnits.add(u);
+				if (it == 10) {
+					it = 0;
+					// Request old units
+					List<Unit> requestUnits = new LinkedList<Unit>();
+					for (Unit u : bf.getUnitList()) {
+						if (u.getTimestamp() < lastTimestamp - EXPIRATION_TIME) {
+							requestUnits.add(u);
+						}
 					}
+					if (!requestUnits.isEmpty())
+						sendMessage(new RefreshMessage(this, serverAddress, server_id, requestUnits));
+				} else {
+					it++;
 				}
-				if (!requestUnits.isEmpty())
-					sendMessage(new RefreshMessage(this, serverAddress, server_id, requestUnits));
 			} 
 			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
@@ -335,6 +341,9 @@ public class Client extends Node {
 			Print("Received data: "+m.getData());
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
+				if (m.getTimestamp() == 0) {
+					Print("Help");
+				}
 				u_new.setTimestamp(m.getTimestamp());
 				if (u_old != null ) {
 					bf.updateUnit(u_old, u_new);

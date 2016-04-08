@@ -73,7 +73,7 @@ public class Unit implements Serializable {
 	public String toString() {
 		return "Unit [id=" + id + ", x=" + x + ", y=" + y + ", hp=" + hp
 				+ ", ap=" + ap + ", maxHp=" + maxHp 
-				+ ", type=" + type + "]";
+				+ ", type=" + type + ", ts=" + lastServerTimestamp + "]";
 	}
 
 	public int getHp() {
@@ -153,6 +153,7 @@ public class Unit implements Serializable {
 		u.type = this.type;
 		u.x = this.x;
 		u.y = this.y;
+		u.lastServerTimestamp = this.lastServerTimestamp;
 		
 		return u;
 	}
