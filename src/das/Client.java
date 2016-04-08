@@ -15,6 +15,7 @@ import das.server.Server;
 public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;
 	
+	private static final long EXPIRATION_TIME = 10 * 1000000000L;
 	private int proposed_server_id;
 	//TODO which variables are volatile?
 	private int server_id;
@@ -30,6 +31,7 @@ public class Client extends Node {
 	private int expectedDataMessageID;
 	private int expectedMessageID;
 	private List<Integer> receivedPastExpected;
+	private long lastTimestamp;
 	
 	private Battlefield bf;
 	private Unit player;
@@ -86,6 +88,15 @@ public class Client extends Node {
 						sendMessage(lastActionMessage);
 					}
 				}
+				// Request old units
+				List<Unit> requestUnits = new LinkedList<Unit>();
+				for (Unit u : bf.getUnitList()) {
+					if (u.getTimestamp() < lastTimestamp - EXPIRATION_TIME) {
+						requestUnits.add(u);
+					}
+				}
+				if (!requestUnits.isEmpty())
+					sendMessage(new RefreshMessage(this, serverAddress, server_id, requestUnits));
 			} 
 			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
@@ -167,6 +178,7 @@ public class Client extends Node {
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
+		lastTimestamp = m.getTimestamp() > lastTimestamp ? m.getTimestamp() : lastTimestamp;
 		/*if (m.getID() > expectedMessageID + 20) {
 			connect();
 			return;

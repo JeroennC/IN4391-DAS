@@ -142,6 +142,8 @@ public class Battlefield implements Serializable {
 		u_active.setY(u_new.getY());
 		u_active.setTimestamp(u_new.getTimestamp());
 		map[u_active.getX()][u_active.getY()] = u_active;
+		if (!u_active.isAlive())
+			killUnit(u_active);
 	}
 	
 	public void placeUnit(Unit u) {

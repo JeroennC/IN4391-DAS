@@ -36,6 +36,7 @@ import das.message.NewServerMessage;
 import das.message.PingMessage;
 import das.message.PulseMessage;
 import das.message.RedirectMessage;
+import das.message.RefreshMessage;
 import das.message.RetransmitMessage;
 import das.message.ServerStartDataMessage;
 import das.message.ServerUpdateMessage;
@@ -348,6 +349,27 @@ public class Server extends Node {
 		ServerStartDataMessage m = new ServerStartDataMessage(
 				this, initServerMessage.getFromAddress(), initServerMessage.getFrom_id(), bf, inbox, getLogContent(), getTime());
 		sendMessage(m);
+	}
+	
+	public void receiveRefreshMessage(RefreshMessage m) {
+		Data d = new Data();
+		List<Unit> units = m.getRequestedUnits();
+		Battlefield bf = trailingStates[0].getBattlefield();
+		synchronized(bf) {
+			for (Unit u : units) {
+				Unit ref = bf.getUnit(u);
+				if (ref == null) {
+					u.setHp(0);
+				} else {
+					u.setHp(ref.getHp());
+					u.setX(ref.getX());
+					u.setY(ref.getY());
+				}
+			}
+		}
+		d.setUpdatedUnits(units);
+		int dataId = getClientConnections().get(m.getFrom_id()).incrementLastDataMessageSentID();
+		sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d, m.getID(), dataId));
 	}
 	
 	public void receiveServerStartDataMessage(ServerStartDataMessage m) {
