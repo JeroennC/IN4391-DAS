@@ -156,7 +156,7 @@ public class ClientViewer extends JPanel implements Runnable {
 		});
 		f.add(this);
 		f.setMinimumSize(new Dimension(200, 200));
-		f.setSize(1000, 1000);
+		f.setSize(400, 400);
 		f.setVisible(true);
 		
 		while(client.isRunning()) {		

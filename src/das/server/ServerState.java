@@ -300,6 +300,7 @@ public class ServerState implements Runnable {
 		Data d = new Data();
 		synchronized(bf) {
 			Unit u = bf.getUnit(action.getExecuterId());
+			
 			if(u == null)
 				d.deleteUnit(action.getExecuterId());
 			else {

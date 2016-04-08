@@ -85,7 +85,7 @@ public class ServerViewer extends JPanel implements Runnable {
 	 */
 	public void paint(Graphics g) {
 		
-		Unit u;
+		Unit u = null;
 		double x = 0, y = 0;
 		double xRatio = (double)this.getWidth() / (double)Battlefield.MAP_WIDTH;
 		double yRatio = (double)this.getHeight() / (double)Battlefield.MAP_HEIGHT;
@@ -106,7 +106,13 @@ public class ServerViewer extends JPanel implements Runnable {
 		/* Draw the field, rectangle-wise */
 		for(int i = 0; i < Battlefield.MAP_WIDTH; i++, x += xRatio, y = 0)
 			for(int j = 0; j < Battlefield.MAP_HEIGHT; j++, y += yRatio) {
-				u = bf.getUnit(i, j);
+				u = null;
+				for (Unit unit : bf.getUnitList()) {
+					if (unit.getX() == i && unit.getY() == j) {
+						u = unit;
+						break;
+					}
+				}
 				if (u == null) continue; // Nothing to draw in this sector
 
 				if (u.isDragon())
@@ -154,7 +160,7 @@ public class ServerViewer extends JPanel implements Runnable {
 		});
 		f.add(this);
 		f.setMinimumSize(new Dimension(200, 200));
-		f.setSize(1000, 1000);
+		f.setSize(400, 400);
 		f.setVisible(true);
 		
 		while(running) {		
