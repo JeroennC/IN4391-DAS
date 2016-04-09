@@ -1,9 +1,12 @@
 package das.message;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import das.Client;
 import das.Node;
@@ -13,6 +16,49 @@ import das.server.Server;
 public abstract class Message implements Serializable {
 	private static final long serialVersionUID = 5970408991964088527L;
 	public static final int FWD_COUNT = 3;
+	
+	private static class NodeComponent {
+		Address address;
+		String name;
+		
+		NodeComponent(Address a, String n) {
+			this.address = a;
+			this.name = n;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((address == null) ? 0 : address.hashCode());
+			result = prime * result + ((name == null) ? 0 : name.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (!(obj instanceof NodeComponent))
+				return false;
+			NodeComponent other = (NodeComponent) obj;
+			if (address == null) {
+				if (other.address != null)
+					return false;
+			} else if (!address.equals(other.address))
+				return false;
+			if (name == null) {
+				if (other.name != null)
+					return false;
+			} else if (!name.equals(other.name))
+				return false;
+			return true;
+		}
+	}
+	
+	private static Map<NodeComponent, Node_RMI> components = new ConcurrentHashMap<NodeComponent, Node_RMI>();;
 	
 	private int message_id;
 	private transient final Node from;
@@ -97,8 +143,24 @@ public abstract class Message implements Serializable {
 	public abstract void receive(Node_RMI node);
 	
 	public static Node_RMI getComponent(Address address, String name){
+		NodeComponent nc = new NodeComponent(address, name);
+		if (Message.components.containsKey(nc)) {
+			boolean exists = true;
+			Node_RMI nr = Message.components.get(nc);
+			try {
+				nr.exists();
+			} catch (RemoteException e) {
+				// Doesn't exist anymore
+				Message.components.remove(nc);
+				exists = false;
+			}
+			if (exists)
+				return Message.components.get(nc);
+		}
 		try {
-			return (Node_RMI) java.rmi.Naming.lookup("rmi://"+address.getAddress()+":"+address.getPort()+"/"+name);
+			Node_RMI nr = (Node_RMI) java.rmi.Naming.lookup("rmi://"+address.getAddress()+":"+address.getPort()+"/"+name);
+			Message.components.put(nc, nr);
+			return nr;
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
 			return null;
 		}

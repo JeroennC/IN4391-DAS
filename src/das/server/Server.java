@@ -389,9 +389,7 @@ public class Server extends Node {
 		Address addr = m.getFromAddress();
 		try {
 			addr.setAddress(getClientHost());
-			System.out.println(addr.getAddress());
 		} catch (ServerNotActiveException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		Print("Received message: " + m.toString());

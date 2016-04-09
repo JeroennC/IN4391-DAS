@@ -15,7 +15,7 @@ import das.server.Server;
 public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;
 	
-	private static final long EXPIRATION_TIME = 10 * 1000000000L;
+	private static final long EXPIRATION_TIME = 10 * 1000000000L; // 10 seconds
 	private int proposed_server_id;
 	//TODO which variables are volatile?
 	private int server_id;

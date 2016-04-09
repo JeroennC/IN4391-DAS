@@ -88,4 +88,8 @@ public abstract class Node extends UnicastRemoteObject implements Node_RMI, Runn
 	public boolean isPrinting() {
 		return doesPrint;
 	}
+	
+	public boolean exists() {
+		return true;
+	}
 }
