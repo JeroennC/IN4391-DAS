@@ -5,7 +5,7 @@
     <property name="dir.jarfile" value="${dir.buildfile}/executable"/>
 	<target name="compile">
 		<mkdir dir="${dir.buildfile}/bin"/>
-		<javac srcdir="src" destdir="${dir.buildfile}/bin"/>
+		<javac srcdir="src" destdir="${dir.buildfile}/bin" debug="on"/>
 	</target>
     <target name="jar" depends="compile">
         <jar destfile="${dir.jarfile}/DAS.jar" filesetmanifest="mergewithoutmain">
