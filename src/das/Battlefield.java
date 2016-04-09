@@ -375,8 +375,9 @@ public class Battlefield implements Serializable {
 	
 	public List<Unit> getUnitList() {
 		List<Unit> result = new ArrayList<Unit>();
-		this.unitList.forEach(unit -> {
-			result.add(unit.clone());
+		this.unitList.forEach(unit -> { 
+			if(unit != null)
+				result.add(unit.clone());
 		});
 		return result;
 	}

@@ -28,7 +28,7 @@ public class ServerState implements Runnable {
 	private volatile State state;
 	public enum State {Start, Running, Inconsistent, Exit};
 	private Thread runningThread;
-	private static Comparator<StateCommand> comparator = (Comparator<StateCommand> & Serializable)((StateCommand m1, StateCommand m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+	public static Comparator<StateCommand> comparator = (Comparator<StateCommand> & Serializable)((StateCommand m1, StateCommand m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
 	private long lastExecutedTime;
 	
 	public ServerState(Server server, long delay) {
@@ -116,25 +116,27 @@ public class ServerState implements Runnable {
 		// Check if action is possible, if not, rollback previous state, and invalidate the commands for later states
 		if (!isPossible(a)) {
 			sc.InvalidateUpwards();
-			Print("Invalid action: " + a.toString());
+			Print("Invalid action (" + sc.getCommandNr()+"/"+ sc.getMessage().getID() +"): " + a.toString());
 			return null;
 		}
 		boolean newPlayer = (a instanceof NewPlayer && ((NewPlayer) a).getNewUnit() == null);
 		Data d = new Data();
-		Unit u = bf.doAction(a);
-		if(a instanceof Heal) 
-			d.updateUnit(bf.getUnit(((Heal) a).getReceiverId()));
-		else if (a instanceof Hit) {
-			if(bf.getUnit(((Hit) a).getReceiverId()) == null)
-				d.deleteUnit(((Hit) a).getReceiverId());
-			else
-				d.updateUnit(bf.getUnit(((Hit) a).getReceiverId()));
-			
-		} else
-			d.updateUnit(u);
-		if(newPlayer) {
-			d.setUpdatedUnits(bf.getUnitList());
-			d.setPlayer(u);
+		synchronized(bf) {
+			Unit u = bf.doAction(a);
+			if(a instanceof Heal) 
+				d.updateUnit(bf.getUnit(((Heal) a).getReceiverId()));
+			else if (a instanceof Hit) {
+				if(bf.getUnit(((Hit) a).getReceiverId()) == null)
+					d.deleteUnit(((Hit) a).getReceiverId());
+				else
+					d.updateUnit(bf.getUnit(((Hit) a).getReceiverId()));
+				
+			} else
+				d.updateUnit(u);
+			if(newPlayer) {
+				d.setUpdatedUnits(bf.getUnitList());
+				d.setPlayer(u);
+			}
 		}
 		return d;
 	}
@@ -143,19 +145,12 @@ public class ServerState implements Runnable {
 		return bf.isActionAllowed(action);
 	}
 	
-	/**
-	 * Take the state + inbox from the faster state
-	 */
-	public void rollback() {
-		// Care, always acquire locks in this order, no deadlocks :)
-		Data d = null;
+	public void rollback(Queue<StateCommand> q) {
 		synchronized (inbox) {
+			inbox = q;
+		}
+		synchronized(inbox) {
 			synchronized (bf) {
-				if(fasterState == null)
-					d = slowerState.bf.difference(bf);
-				bf = slowerState.cloneBattlefield();
-				inbox = slowerState.cloneInbox();
-				nextCommandNr = slowerState.nextCommandNr;
 				// TODO: Make this neater, For now, all synchronized
 				StateCommand firstCommand = inbox.peek();
 				int executed = 0;
@@ -185,6 +180,23 @@ public class ServerState implements Runnable {
 					}	
 				}
 				Print("And we're back, executed: " + executed);
+			}
+		}
+	}
+	
+	/**
+	 * Take the state + inbox from the faster state
+	 */
+	public void rollback() {
+		// Care, always acquire locks in this order, no deadlocks :)
+		Data d = null;
+		synchronized (inbox) {
+			synchronized (bf) {
+				if(fasterState == null)
+					d = slowerState.bf.difference(bf);
+				bf = slowerState.cloneBattlefield();
+				nextCommandNr = slowerState.nextCommandNr;
+				rollback(slowerState.cloneInbox());
 			}
 		}
 		
@@ -228,7 +240,8 @@ public class ServerState implements Runnable {
 				if(!inbox.contains(sc))
 					inbox.add(sc);
 			}
-			runningThread.interrupt();
+			if(runningThread != null)
+				runningThread.interrupt();
 			return null;
 		} else {
 			Data d;
@@ -257,14 +270,14 @@ public class ServerState implements Runnable {
 	public synchronized Queue<StateCommand> cloneInbox() {
 		Queue<StateCommand> result = new PriorityQueue<StateCommand>(1, comparator);
 		if (fasterState == null) return result;
-		
-		StateCommand c_mine;
-		Iterator<StateCommand> it = inbox.iterator();
-		while(it.hasNext()) {
-			c_mine = it.next();
-			result.add(c_mine.getPreviousCommand().reset());
+		synchronized(inbox) {
+			StateCommand c_mine;
+			Iterator<StateCommand> it = inbox.iterator();
+			while(it.hasNext()) {
+				c_mine = it.next();
+				result.add(c_mine.getPreviousCommand().reset());
+			}
 		}
-		
 		return result;
 	}
 	

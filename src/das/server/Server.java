@@ -5,6 +5,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.rmi.RemoteException;
 import java.rmi.server.ServerNotActiveException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +21,6 @@ import das.Main;
 import das.Node;
 import das.Unit;
 import das.action.Hit;
-import das.action.NewPlayer;
 import das.log.LogEntry;
 import das.log.LogSender;
 import das.message.ActionMessage;
@@ -27,7 +28,6 @@ import das.message.Address;
 import das.message.ConnectMessage;
 import das.message.Data;
 import das.message.DataMessage;
-import das.message.DenyMessage;
 import das.message.InitMessage;
 import das.message.InitServerMessage;
 import das.message.LogMessage;
@@ -60,7 +60,7 @@ public class Server extends Node {
 	private Thread pulse;
 	
 	private ServerState[] trailingStates;
-	private Queue<Message> inbox;
+	private List<Message> inbox;
 	
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
@@ -73,7 +73,7 @@ public class Server extends Node {
 		}
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
-		inbox = new PriorityQueue<Message>(1, (Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+		inbox = new ArrayList<Message>();
 		
 		dragonControl = new Object();
 		InitLog();
@@ -373,30 +373,52 @@ public class Server extends Node {
 		
 		for(ServerState ss: trailingStates)
 			ss.init(m.getBf());
+		for(int i=TSS_DELAYS.length-1; i>=0;i--) {
+			PriorityQueue<StateCommand> q = new PriorityQueue<StateCommand>(m.getInbox().size(), ServerState.comparator);
+			q.addAll(m.getInbox());
+			trailingStates[i].rollback(q);
+		}
+		
 		for(int i = 0; i < trailingStates.length; i++){
 			new Thread(trailingStates[i], this.getName() + "_ts_" + i).start();
 			while(trailingStates[i].getState() != ServerState.State.Running);
 		}
-		for(int i=0;i<TSS_DELAYS.length;i++)
-			for(StateCommand sc: m.getInbox())
-				trailingStates[i].receive(sc);
-
 		changeState(State.Running);
 	}
 
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
+		Print("Received message: " + m.toString());
+		//TODO for client messages receive in order of sending (so with messages in tail received first)
+		if(m.getFrom_id().startsWith("Server")) {
+			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
+				updateTimer(m);
+		} if(m.getFrom_id().startsWith("Client")) {
+			m.setTimestamp(getTime());
+		}
+		inbox.sort((Message m1, Message m2) -> (int) (m1.getTimestamp() - m2.getTimestamp()));
+		for(Iterator<Message> iterator = inbox.iterator(); iterator.hasNext();) {
+			Message n = iterator.next();
+			if(canReceive(n)) {
+				deliverMessage(n);
+				iterator.remove();
+			}
+		}
+		if(canReceive(m))
+			deliverMessage(m);
+		else
+			inbox.add(m);
+	}
+	
+	public synchronized void deliverMessage(Message m) {
 		Address addr = m.getFromAddress();
 		try {
 			addr.setAddress(getClientHost());
 		} catch (ServerNotActiveException e1) {
 			e1.printStackTrace();
 		}
-		Print("Received message: " + m.toString());
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
-			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
-				updateTimer(m);
 			ServerConnection c = getServerConnections().get(m.getFrom_id());
 			if(c == null) {
 				c = new ServerConnection( addr, getTime());
@@ -405,7 +427,6 @@ public class Server extends Node {
 			}
 			c.addAck(m.getID());
 		} if(m.getFrom_id().startsWith("Client")) {
-			m.setTimestamp(getTime());
 			if(!getConnections().containsKey(m.getFrom_id())) {
 				if(m instanceof ConnectMessage || m instanceof InitMessage)
 					getConnections().put(m.getFrom_id(), new ClientConnection( addr) );
@@ -414,13 +435,7 @@ public class Server extends Node {
 			}
 		}
 		getConnections().get(m.getFrom_id()).setLastConnectionTime(getTime());
-		for(Message n: inbox)
-			if(canReceive(n))
-				n.receive(this);
-		if(canReceive(m))
-			m.receive(this);
-		else
-			inbox.add(m);
+		m.receive(this);
 	}
 	
 	public boolean canReceive(Message m) {
