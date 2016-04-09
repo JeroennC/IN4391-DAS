@@ -48,12 +48,14 @@ public class ServerViewer extends JPanel implements Runnable {
 	
 	private Battlefield bf;
 	private Node_RMI server;
+	private int server_id;
 
 	/**
 	 * Create a battlefield viewer in 
 	 * a new thread. 
 	 */
 	public ServerViewer(int server_id) {
+		this.server_id = server_id;
 		doubleBufferGraphics = null;
 
 		bf = new Battlefield();
@@ -162,6 +164,7 @@ public class ServerViewer extends JPanel implements Runnable {
 		f.setMinimumSize(new Dimension(200, 200));
 		f.setSize(400, 400);
 		f.setVisible(true);
+		f.setTitle("Serverviewer for server " + server_id);
 		
 		while(running) {		
 			/* Keep the system running on a nice speed */

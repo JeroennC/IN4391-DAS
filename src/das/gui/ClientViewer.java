@@ -158,6 +158,7 @@ public class ClientViewer extends JPanel implements Runnable {
 		f.setMinimumSize(new Dimension(200, 200));
 		f.setSize(400, 400);
 		f.setVisible(true);
+		f.setTitle("Clientviewer for Client " +client.getName());
 		
 		while(client.isRunning()) {		
 			/* Keep the system running on a nice speed */

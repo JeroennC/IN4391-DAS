@@ -205,14 +205,14 @@ public class Server extends Node {
 						sc.setLastServerStatusTime(getTime());
 					}
 					//Client forwarding to other server
-					/*if(sc.getServerLoad() < serverLoad && serverLoad > 0) {
+					if(sc.getServerLoad() < serverLoad && serverLoad > 0) {
 						int sid = Integer.valueOf(e.getKey().replace("Server_",""));
 						String name = (String) getClientConnections().keySet().toArray()[0];
 						sendMessage(new RedirectMessage(this, getAddress(name), name, sid ));
 						getConnections().remove(name);
 						sc.setServerLoad(sc.getServerLoad() + 1);
 						serverLoad--;
-					}*/
+					}
 					
 				}
 			}
