@@ -228,7 +228,7 @@ public class Server extends Node {
 	private void sendData(Data data, String from, int mid) {
 		Unit player = data.getPlayer();
 		for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
-			int dataId = getClientConnections().get(e.getKey()).incrementLastDataMessageSentID();
+			int dataId = e.getValue().incrementLastDataMessageSentID();
 			int am = -1;
 			Data d = (from == null ?  data : data.clone());
 			if(e.getKey().equals(from)) {
