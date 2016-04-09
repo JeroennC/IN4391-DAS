@@ -144,6 +144,8 @@ public class Client extends Node {
 			}
 			// Move towards nearest dragon
 			Unit dragon = bf.getClosestDragon(player);
+			if(dragon == null)
+				return null;
 			int distX = dragon.getX() - player.getX();
 			int distY = dragon.getY() - player.getY();
 			MoveType m;
@@ -361,7 +363,7 @@ public class Client extends Node {
 					bf.killUnit(u);
 				}
 			}
-			if (!player.isAlive())
+			if (player != null && !player.isAlive())
 				changeState(State.Exit);
 				
 		}

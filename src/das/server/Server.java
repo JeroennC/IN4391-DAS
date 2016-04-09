@@ -316,7 +316,7 @@ public class Server extends Node {
 		c.setLastDataMessageSentID(0);
 		if(m.getPlayerId() == -1) {
 			// Create new player
-			int playerId = trailingStates[0].getNextUnitId();
+			int playerId = trailingStates[0].getNextUnitId() + Main.ADDRESSES.size() * position;
 			receiveActionMessage(new ActionMessage(m, playerId));
 			
 			// Log
@@ -401,6 +401,7 @@ public class Server extends Node {
 			if(c == null) {
 				c = new ServerConnection( addr, getTime());
 				getConnections().put(m.getFrom_id(), c );
+				updateServerPositioning();
 			}
 			c.addAck(m.getID());
 		} if(m.getFrom_id().startsWith("Client")) {
