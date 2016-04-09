@@ -373,10 +373,12 @@ public class Server extends Node {
 		
 		for(ServerState ss: trailingStates)
 			ss.init(m.getBf());
-		for(int i=TSS_DELAYS.length-1; i>=0;i--) {
-			PriorityQueue<StateCommand> q = new PriorityQueue<StateCommand>(m.getInbox().size(), ServerState.comparator);
-			q.addAll(m.getInbox());
-			trailingStates[i].rollback(q);
+		if (m.getInbox().size() > 0) {
+			for(int i=TSS_DELAYS.length-1; i>=0;i--) {
+				PriorityQueue<StateCommand> q = new PriorityQueue<StateCommand>(m.getInbox().size(), ServerState.comparator);
+				q.addAll(m.getInbox());
+				trailingStates[i].rollback(q);
+			}
 		}
 		
 		for(int i = 0; i < trailingStates.length; i++){
