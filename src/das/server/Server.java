@@ -395,6 +395,7 @@ public class Server extends Node {
 		if(m.getFrom_id().startsWith("Server")) {
 			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
 				updateTimer(m);
+			unacknowledgedMessages.removeIf(n -> n.getFrom_id() == m.getFrom_id() && m.getAcks().contains(n.getID()));
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
 		}
