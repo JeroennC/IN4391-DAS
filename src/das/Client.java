@@ -343,12 +343,10 @@ public class Client extends Node {
 			Print("Received data: "+m.getData());
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
-				if (m.getTimestamp() == 0) {
-					Print("Help");
-				}
 				u_new.setTimestamp(m.getTimestamp());
 				if (u_old != null ) {
-					bf.updateUnit(u_old, u_new);
+					if (u_old.getTimestamp() < u_new.getTimestamp())
+						bf.updateUnit(u_old, u_new);
 				} else {
 					Print("New Unit: "+u_new);
 					bf.placeUnit(u_new);
