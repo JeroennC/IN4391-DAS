@@ -202,7 +202,9 @@ public class Main {
 	 * Remove a thread from the pool
 	 */
 	public static void removeThread(String threadName) {
-		nodes.removeIf(nr -> nr.thread.getName().equals(threadName));
+		synchronized (nodes) {
+			nodes.removeIf(nr -> nr.thread.getName().equals(threadName));			
+		}
 	}
 	
 	/**

@@ -46,5 +46,9 @@ public class DataMessage extends Message {
 	public void setActionMessage_id(int actionMessage_id) {
 		this.actionMessage_id = actionMessage_id;
 	}
-
+	
+	@Override
+	public String toString() {
+		return super.toString() + "{"+getDatamessage_id()+"}";
+	}
 }

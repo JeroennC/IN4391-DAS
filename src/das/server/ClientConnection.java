@@ -6,11 +6,13 @@ public class ClientConnection extends Connection {
 	private int lastDataMessageSentID;
 	private boolean _canMove;
 	private int unitId;
+	private int invalidMoves;
 	
 	public ClientConnection(Address a) {
 		super(a);
 		this.setLastDataMessageSentID(0);
 		_canMove = true; 
+		setInvalidMoves(0);
 	}
 
 	public int incrementLastDataMessageSentID() {
@@ -39,6 +41,18 @@ public class ClientConnection extends Connection {
 
 	public void setUnitId(int unitId) {
 		this.unitId = unitId;
+	}
+
+	public int getInvalidMoves() {
+		return invalidMoves;
+	}
+
+	public void setInvalidMoves(int invalidMoves) {
+		this.invalidMoves = invalidMoves;
+	}
+	
+	public void incrementInvalidMoves() {
+		this.invalidMoves++;
 	}
 
 	

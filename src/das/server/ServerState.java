@@ -10,6 +10,7 @@ import java.util.Queue;
 import das.Battlefield;
 import das.Unit;
 import das.action.Action;
+import das.action.DeletePlayer;
 import das.action.Heal;
 import das.action.Hit;
 import das.action.Move;
@@ -131,7 +132,9 @@ public class ServerState implements Runnable {
 				else
 					d.updateUnit(bf.getUnit(((Hit) a).getReceiverId()));
 				
-			} else
+			} else if(a instanceof DeletePlayer)
+				d.deleteUnit(a.getExecuterId());
+			else
 				d.updateUnit(u);
 			if(newPlayer) {
 				d.setUpdatedUnits(bf.getUnitList());

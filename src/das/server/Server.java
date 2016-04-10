@@ -20,6 +20,7 @@ import das.Battlefield;
 import das.Main;
 import das.Node;
 import das.Unit;
+import das.action.DeletePlayer;
 import das.action.Hit;
 import das.log.LogEntry;
 import das.log.LogSender;
@@ -200,20 +201,10 @@ public class Server extends Node {
 					sendMessage(new PulseMessage(this, c.getAddress(), e.getKey() ));
 				} else {
 					ServerConnection sc = (ServerConnection) c; 
-					if(sc.getLastServerStatusTime() + 10*PULSE < getTime()) {
+					if(sc.getLastServerStatusTime() + 20*PULSE < getTime()) {
 						sendMessage(new ServerUpdateMessage(this, c.getAddress(), e.getKey(), serverLoad));
 						sc.setLastServerStatusTime(getTime());
-					}
-					//Client forwarding to other server
-					if(sc.getServerLoad() < serverLoad && serverLoad > 0) {
-						int sid = Integer.valueOf(e.getKey().replace("Server_",""));
-						String name = (String) getClientConnections().keySet().toArray()[0];
-						sendMessage(new RedirectMessage(this, getAddress(name), name, sid ));
-						getConnections().remove(name);
-						sc.setServerLoad(sc.getServerLoad() + 1);
-						serverLoad--;
-					}
-					
+					}					
 				}
 			}
 			this.canMove = true;
@@ -228,6 +219,8 @@ public class Server extends Node {
 	private void sendData(Data data, String from, int mid) {
 		Unit player = data.getPlayer();
 		for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
+			if(player == null && e.getValue().getLastDataMessageSentID() == 0)
+				continue; //Do not send this data, wait for the init message
 			int dataId = e.getValue().incrementLastDataMessageSentID();
 			int am = -1;
 			Data d = (from == null ?  data : data.clone());
@@ -245,8 +238,11 @@ public class Server extends Node {
 		boolean fromMyself = m.getFrom_id().equals(this.getName());
 		//boolean first = (m.getAction() instanceof NewPlayer);
 		if(/*first && */(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())))) {
-			if(fromClient)
-				getClientConnections().get(m.getFrom_id()).canMove(false);
+			if(fromClient){
+				ClientConnection cc = getClientConnections().get(m.getFrom_id());
+				cc.canMove(false);
+				cc.setInvalidMoves(0);
+			}
 			// Create linked StateCommands
 			StateCommand[] commands = new StateCommand[TSS_DELAYS.length];
 			for(int i = 0; i < TSS_DELAYS.length; i++) 
@@ -268,8 +264,18 @@ public class Server extends Node {
 				}
 			}
 		} else if(fromClient) {
-			Data d = trailingStates[0].getDeniedData(m.getAction());
-			int dm_id = getClientConnections().get(m.getFrom_id()).incrementLastDataMessageSentID();
+			ClientConnection cc = getClientConnections().get(m.getFrom_id());
+			cc.incrementInvalidMoves();
+			if(cc.getInvalidMoves() > 20) {
+				Print("Delete user "+m.getFrom_id() + " with user id "+cc.getUnitId());
+				ActionMessage am = new ActionMessage(this, new DeletePlayer(cc.getUnitId()));
+				am.setTimestamp(getTime());
+				getConnections().remove(m.getFrom_id());
+				receiveActionMessage(am);
+				return;
+			}
+			Data d = cc.getInvalidMoves() > 5 ? trailingStates[0].getData() : trailingStates[0].getDeniedData(m.getAction());
+			int dm_id = cc.incrementLastDataMessageSentID();
 			sendMessage(new DataMessage(this, m.getFromAddress(), m.getFrom_id(), d, m.getID(),  dm_id));
 		}
 	}
@@ -303,11 +309,17 @@ public class Server extends Node {
 				sid = Integer.valueOf(name.replace("Server_", ""));
 			}
 		}
+		if(sid == id) {
+			ClientConnection cc = getClientConnections().get(m.getFrom_id());
+			cc.setLastMessageSentID(0);
+			cc.setLastDataMessageSentID(0);
+			cc.canMove(true);
+		}
 		sendMessage(new RedirectMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), sid));
 		if(sid != id) {
 			getConnections().remove(m.getFrom_id());
 			getServerConnections().get(name).setServerLoad(least + 1);
-		}
+		} 
 	}
 	
 	public void receiveInitMessage(InitMessage m) {
@@ -321,12 +333,26 @@ public class Server extends Node {
 			
 			// Log
 			Log("Initializing client: " + m.getFrom_id());
-		} else
-			sendData(trailingStates[0].getData(), null, -1);
+		} else {
+			int dmid = c.incrementLastDataMessageSentID();
+			DataMessage dm = new DataMessage(this, m.getFromAddress(), m.getFrom_id(), 
+					trailingStates[0].getData(), -1, dmid);
+			sendMessage(dm);
+		}
 	}
 	
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {
-		getServerConnections().get(m.getFrom_id()).setServerLoad(m.getServerLoad());		
+		ServerConnection sc = getServerConnections().get(m.getFrom_id()); 
+		sc.setServerLoad(m.getServerLoad());
+		int serverLoad = getClientConnections().size();
+		//Client forwarding to other server
+		if(sc.getServerLoad() < serverLoad - 1 && serverLoad > 0) {
+			int sid = Integer.valueOf(m.getFrom_id().replace("Server_",""));
+			String name = (String) getClientConnections().keySet().toArray()[0];
+			sendMessage(new RedirectMessage(this, getAddress(name), name, sid ));
+			getConnections().remove(name);
+			sc.setServerLoad(sc.getServerLoad() + 1);
+		}
 	}
 	
 	public void receiveNewServerMessage(NewServerMessage m) {
@@ -352,7 +378,7 @@ public class Server extends Node {
 			for (Unit u : units) {
 				Unit ref = bf.getUnit(u);
 				if (ref == null) {
-					u.setHp(0);
+					d.deleteUnit(u.getId());
 				} else {
 					u.setHp(ref.getHp());
 					u.setX(ref.getX());
