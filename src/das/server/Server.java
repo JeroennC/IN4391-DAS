@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -48,6 +49,7 @@ public class Server extends Node {
 	public static final int PULSE = 1000;//ms
 	public static final String LOG_DIR = "log";
 	private static final int[] TSS_DELAYS = {0, 200, 500, 1000, 10000};
+	private static final int ACK_WAIT = 4000;//ms
 	
 	/* Server positioning */
 	private Object dragonControl;
@@ -207,6 +209,25 @@ public class Server extends Node {
 					}					
 				}
 			}
+			// Resend unacknowledged messages if necessary
+			List<Message> currentuaM = new LinkedList<Message>(unacknowledgedMessages);
+			for (Message m : currentuaM) {
+				// Get receiver
+				ServerConnection sc = getServerConnections().get(m.getReceiver_id());
+				if (sc == null) {
+					// If server doesn't exist anymore
+					unacknowledgedMessages.remove(m);
+					continue;
+				}
+
+				if (this.getTime() - ACK_WAIT > m.getTimestamp()) {
+					// Resend message
+					m.setTimestamp(this.getTime());
+					Log("Message was not acknowledged, resending " + m.toString());
+					resendMessage(m);
+				}
+			}		
+			
 			this.canMove = true;
 			try { Thread.sleep(PULSE); } catch (InterruptedException e1) { }
 		}
@@ -421,7 +442,8 @@ public class Server extends Node {
 		if(m.getFrom_id().startsWith("Server")) {
 			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
 				updateTimer(m);
-			unacknowledgedMessages.removeIf(n -> n.getFrom_id() == m.getFrom_id() && m.getAcks().contains(n.getID()));
+			if (m.getAcks() != null && !m.getAcks().isEmpty())
+				unacknowledgedMessages.removeIf(n -> n.getReceiver_id().equals(m.getFrom_id()) && m.getAcks().contains(n.getID()));
 		} if(m.getFrom_id().startsWith("Client")) {
 			m.setTimestamp(getTime());
 		}
@@ -454,6 +476,12 @@ public class Server extends Node {
 				getConnections().put(m.getFrom_id(), c );
 				updateServerPositioning();
 			}
+			if (m.getID() > 0 && c.hasMessageId(m.getID())) {
+				// Message has already been executed, ignore it (> 0 to not do this at startup)
+				Log("Received already executed message: " + m.toString());
+				return;
+			}
+			c.addReceivedMessageId(m.getID());
 			c.addAck(m.getID());
 		} if(m.getFrom_id().startsWith("Client")) {
 			if(!getConnections().containsKey(m.getFrom_id())) {
@@ -516,6 +544,7 @@ public class Server extends Node {
 	public synchronized void sendMessage(Message m) {
 		Connection c = getConnections().get(m.getReceiver_id());
 		int m_id = (c == null ? 0 : c.getLastMessageSentID()); 
+		boolean send_it = true;
 		m.setID(m_id);
 		if(c != null) {
 			c.setLastMessageSentID(m_id + 1);
@@ -523,9 +552,19 @@ public class Server extends Node {
 			if(m.getReceiver_id().startsWith("Server")) {
 				unacknowledgedMessages.add(m);
 				m.setAcks(c.getAndResetAcks());
+				/*
+				if (new Random().nextInt(10) == 0) {
+					Log("Not sending " + m.toString());
+					send_it = false;
+				}
+				*/
 			}
 		}
-		m.send();
+		// Randomly not send messages
+		if (send_it)
+			m.send();
+		else
+			m.setTimestamp(getTime());
 	}
 	
 	public synchronized void resendMessage(Message m) {
