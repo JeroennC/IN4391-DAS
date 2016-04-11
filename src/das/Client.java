@@ -15,46 +15,59 @@ import das.server.Server;
 public class Client extends Node {
 	private static final long serialVersionUID = 8743582021067062104L;
 	
-	private static final long EXPIRATION_TIME = 10 * 1000; // 10 seconds
+	private static final long EXPIRATION_TIME = 10 * 1000L; // 10 seconds
 	private int proposed_server_id;
 	//TODO which variables are volatile?
-	private int server_id;
-	private Address serverAddress;
+	private volatile int server_id;
+	private volatile Address serverAddress;
 	private volatile boolean _canMove;
 	private volatile Thread pulseTimer;
 	private List<Message> sentMessages;
-	private List<DataMessage> dataMessageBuffer;
+	private volatile List<DataMessage> dataMessageBuffer;
 	private List<ActionMessage> sentActionMessages;
 	private ActionMessage lastActionMessage;
 	private Object lastActionAccess;
 	private int lastMessageSentID;
-	private int expectedDataMessageID;
-	private int expectedMessageID;
-	private List<Integer> receivedPastExpected;
-	private long lastTimestamp;
+	private volatile int expectedDataMessageID;
+	private volatile int expectedMessageID;
+	private volatile List<Integer> receivedPastExpected;
+	private volatile long lastTimestamp;
+	private int retransmitRequested;
 	
 	private Battlefield bf;
-	private Unit player;
+	private volatile Unit player;
 	
 	public Client(int id) throws RemoteException {
 		super(id, "Client_"+id);
 		this.proposed_server_id = -1;
-		sentActionMessages = new LinkedList<ActionMessage>();
 		bf = new Battlefield();
+		pulseTimer = (new Thread() {
+			public void run() {
+				while(state != Client.State.Exit) {
+					try { Thread.sleep(2 * Server.PULSE); } catch (InterruptedException e) { continue; }
+					if(!interrupted()) sendMessage(new PingMessage(Client.this, serverAddress, server_id));
+					else continue;
+					try { Thread.sleep(3 * Server.PULSE); } catch (InterruptedException e) { continue; }
+					if(!interrupted()) {
+						Print("Pulse_time_out");
+						connect();
+					}
+					else continue;
+				}
+			}
+		});
 		reset();
 	}
 	
 	public Client(int id, int proposed_server_id) throws RemoteException {
-		super(id, "Client_"+id);
+		this(id);
 		this.proposed_server_id = proposed_server_id;
-		sentActionMessages = new LinkedList<ActionMessage>();
-		bf = new Battlefield();
-		reset();
 	}
 	
 	public synchronized void reset() {
-		if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
-		pulseTimer = new Thread();
+		synchronized (pulseTimer) {
+			if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
+		}
 		_canMove = false;
 		changeState(State.Disconnected);
 		sentMessages = new LinkedList<Message>();
@@ -65,13 +78,14 @@ public class Client extends Node {
 		expectedMessageID = 0;
 		lastMessageSentID = 0;
 		receivedPastExpected = new LinkedList<Integer>();
+		retransmitRequested = 0;
 	}
 
 	@Override
 	public void run() {
 		//Sleep so that not all clients start at the same moment.
 		try {Thread.sleep((int) (Math.random() * 2000));} catch (InterruptedException e) {}
-		
+		pulseTimer.start();
 		connect();
 		
 		int it = 0;
@@ -81,13 +95,15 @@ public class Client extends Node {
 				//Do nothing
 			} else if(state == State.Running && _canMove) {
 				if (player != null) {
-					Action a = doMove();
+					Action a = player.isAlive() ? doMove() : null;
 					if(a != null) {
 						synchronized(lastActionAccess) {
 							lastActionMessage = new ActionMessage(this, serverAddress, server_id, a);
 						}
 						sendMessage(lastActionMessage);
 					}
+					if(!player.isAlive() && player.getTimestamp() < lastTimestamp - 2 * Server.PULSE)
+						changeState(State.Exit);
 				}
 				if (it == 10) {
 					it = 0;
@@ -186,23 +202,32 @@ public class Client extends Node {
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
+		if(!m.getFrom_id().equals("Server_"+server_id));
 		lastTimestamp = m.getTimestamp() > lastTimestamp ? m.getTimestamp() : lastTimestamp;
-		/*if (m.getID() > expectedMessageID + 20) {
+		if(((state == State.Disconnected || state == State.Initialization) && m.getID() > expectedMessageID + 20) || m.getID() > expectedMessageID + 30)
+			return;
+		if (m.getID() > expectedMessageID + 20) {
+			Print("message_missed_overflow");
 			connect();
 			return;
 		} else if (m.getID() > expectedMessageID) {
-			//TODO You could also set a timer for this to wait a little longer before requesting retransmission
-			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedMessageID, m.getID() - 1));
 			receivedPastExpected.add(m.getID());
 		} else if (m.getID() == expectedMessageID ){
 			expectedMessageID++;
 			Collections.sort(receivedPastExpected);
 			while(!receivedPastExpected.isEmpty() && receivedPastExpected.get(0) <= expectedMessageID)
 				expectedMessageID = Math.max(expectedMessageID, receivedPastExpected.remove(0)) + 1;
-		} else
+		} else if(!(m instanceof RedirectMessage))
 			return;
 		if(receivedPastExpected.contains(m.getID()))
-			return;*/
+			return;
+		if (m.getID() > expectedMessageID + 5 * (retransmitRequested+1)) {
+			//missed 5 messages, request these messages
+			sendMessage(new RetransmitMessage(this, serverAddress, server_id, expectedMessageID, m.getID() - 1));
+			retransmitRequested++;
+		} else if(receivedPastExpected.isEmpty())
+			retransmitRequested = 0;
+		
 		m.receive(this);		
 	}
 	
@@ -213,17 +238,6 @@ public class Client extends Node {
 	private void resetPulseTimer() {
 		synchronized(pulseTimer) {
 			if(pulseTimer != null && pulseTimer.isAlive()) pulseTimer.interrupt();
-			pulseTimer = (new Thread() {
-				public void run() {
-					try { Thread.sleep(2 * Server.PULSE); } catch (InterruptedException e) { return; }
-					if(!interrupted()) sendMessage(new PingMessage(Client.this, serverAddress, server_id));
-					else return;
-					try { Thread.sleep(3 * Server.PULSE); } catch (InterruptedException e) { return; }
-					if(!interrupted()) connect();
-					else return;
-				}
-			});
-			pulseTimer.start();
 		}
 	}
 	
@@ -234,7 +248,7 @@ public class Client extends Node {
 	}
 	
 	public void receiveDenial(DenyMessage dm) {
-		sentActionMessages.removeIf(n -> n.getID() == dm.getDeniedMessage_id());
+		//sentActionMessages.removeIf(n -> n.getID() == dm.getDeniedMessage_id());
 		boolean reinit = false;
 		synchronized(lastActionAccess) {
 			if (lastActionMessage != null && lastActionMessage.getID() == dm.getDeniedMessage_id()) {
@@ -324,7 +338,12 @@ public class Client extends Node {
 	}
 	
 	public void receiveData(DataMessage m) {
-		sentActionMessages.removeIf(n -> n.getID() == m.getActionMessage_id());
+		//sentActionMessages.removeIf(n -> n.getID() == m.getActionMessage_id());
+		if(m.getDatamessage_id() > expectedDataMessageID + 20) {
+			Print("data_message_overflow ("+m.getDatamessage_id()+","+expectedDataMessageID+")");
+			connect();
+			return;
+		}			
 		dataMessageBuffer.add(m);
 		Collections.sort(dataMessageBuffer, 
 				(DataMessage m1, DataMessage m2) -> m1.getDatamessage_id() - m2.getDatamessage_id());
@@ -341,6 +360,12 @@ public class Client extends Node {
 	public void deliverData(DataMessage m) {
 		synchronized(bf) {
 			Print("Received data: "+m.getData());
+			if(state == State.Initialization)
+				for(Unit u_old: bf.getUnitList()) 
+					if(m.getData().getUpdatedUnits().contains(u_old)) {
+						u_old.setTimestamp(m.getTimestamp());
+						bf.killUnit(u_old);
+					}
 			for(Unit u_new: m.getData().getUpdatedUnits()) {
 				Unit u_old = bf.getUnit(u_new);
 				u_new.setTimestamp(m.getTimestamp());
@@ -361,13 +386,13 @@ public class Client extends Node {
 					bf.killUnit(u);
 				}
 			}
-			if (player != null && !player.isAlive())
-				changeState(State.Exit);
+			//if (player != null && !player.isAlive())
+				//changeState(State.Exit);
 				
 		}
 		if(state == State.Initialization) {
-			for(ActionMessage am: sentActionMessages)
-				sendMessage(am);
+			//for(ActionMessage am: sentActionMessages)
+			//	sendMessage(am);
 			changeState(State.Running);
 		}
 	}

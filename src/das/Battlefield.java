@@ -347,7 +347,8 @@ public class Battlefield implements Serializable {
 			// Must be opposite types, not dead
 			if (dest != null && dest.isAlive() && (dest.isType() ^ unit.isType())) return true;
 			return false;
-		}
+		} else if(action instanceof DeletePlayer)
+			return true;
 		return false;
 	}
 	
@@ -369,7 +370,10 @@ public class Battlefield implements Serializable {
 			healUnit(unit, getUnit(((Heal) action).getReceiverId()));
 		} else if (action instanceof Hit) {
 			attackUnit(unit, getUnit(((Hit) action).getReceiverId()));
-		} 
+		} else if (action instanceof DeletePlayer) {
+			killUnit(unit);
+			return null;
+		}
 		return unit;
 	}
 	
