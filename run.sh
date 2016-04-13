@@ -1,6 +1,6 @@
 #!/bin/bash
 # Runs the executable
-myip = $(cat ../ip.txt)
+myip=$(cat ../ip.txt)
 echo -e "Enter the config file: \c "
 read filename
 echo "Launching.."
