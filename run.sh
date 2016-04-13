@@ -1,6 +1,7 @@
 #!/bin/bash
 # Runs the executable
 myip=$(cat ../ip.txt)
+echo "Your IP is ${myip}"
 echo -e "Enter the config file: \c "
 read filename
 echo "Launching.."
