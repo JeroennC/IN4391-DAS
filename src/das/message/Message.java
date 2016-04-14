@@ -6,6 +6,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import das.Client;
@@ -117,6 +118,7 @@ public abstract class Message implements Serializable {
 		from.Print("Sendmessage "+this);
 		if(receiver == null)
 			return;
+		if(new Random(System.nanoTime()).nextInt(100) == 0) return;
 		new Thread() {
 			  public void run() { 
 				  try {
