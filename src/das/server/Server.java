@@ -95,7 +95,7 @@ public class Server extends Node {
 
 	@Override
 	public void run() {
-		Log("Server initializing");
+		Log("S|Server initializing");
 		connect();
 		while(state != State.Exit) {
 			// Dragon control
@@ -139,7 +139,7 @@ public class Server extends Node {
 			}
 		}
 		
-		Log("Shutting down");
+		Log("S|Shutting down");
 		close();
 		pulse.interrupt();
 		Main.removeThread(this.getName());
@@ -224,7 +224,7 @@ public class Server extends Node {
 				if (this.getTime() - ACK_WAIT > m.getTimestamp()) {
 					// Resend message
 					m.setTimestamp(this.getTime());
-					Log("Message was not acknowledged, resending " + m.toString());
+					Log("S|Message was not acknowledged, resending " + m.toString());
 					resendMessage(m);
 				}
 			}
@@ -361,7 +361,7 @@ public class Server extends Node {
 			receiveActionMessage(new ActionMessage(m, playerId));
 			
 			// Log
-			Log("Initializing client: " + m.getFrom_id());
+			Log("S|Initializing client: " + m.getFrom_id());
 		} else {
 			int dmid = c.incrementLastDataMessageSentID();
 			DataMessage dm = new DataMessage(this, m.getFromAddress(), m.getFrom_id(), 
@@ -486,7 +486,7 @@ public class Server extends Node {
 			}
 			if (m.getID() > 0 && c.hasMessageId(m.getID())) {
 				// Message has already been executed, ignore it (> 0 to not do this at startup)
-				Log("Received already executed message: " + m.toString());
+				Log("S|Received already executed message: " + m.toString());
 				return;
 			}
 			c.addReceivedMessageId(m.getID());
@@ -585,7 +585,7 @@ public class Server extends Node {
 	public void InitLog() {
 		try {
 			Files.deleteIfExists(Paths.get(Server.LOG_DIR + "/" + this.getName() + ".txt"));
-			new LogEntry(this.getName(), "Log created", this.getTime()).WriteToFile(this.getName() + ".txt");;
+			new LogEntry(this.getName(), "S|Log created", this.getTime()).WriteToFile(this.getName() + ".txt");;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
