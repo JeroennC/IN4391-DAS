@@ -185,7 +185,8 @@ public class ServerState implements Runnable {
 						break;
 					}	
 				}
-				Print("And we're back, executed: " + executed);
+				//Print("And we're back, executed: " + executed);
+				server.Log("R|" + this.delay + "|" + executed);
 			}
 		}
 	}
