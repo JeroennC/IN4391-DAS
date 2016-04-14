@@ -101,7 +101,7 @@ public class Client extends Node {
 	@Override
 	public void run() {
 		//Sleep so that not all clients start at the same moment.
-		try {Thread.sleep((int) (Math.random() * 2000));} catch (InterruptedException e) {}
+		//try {Thread.sleep((int) (Math.random() * 2000));} catch (InterruptedException e) {}
 		pulseTimer.start();
 		connect();
 		
