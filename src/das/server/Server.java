@@ -185,6 +185,7 @@ public class Server extends Node {
 	}
 	
 	public void callPulse() {
+		int it = 0;
 		while(state != State.Exit) {
 			int serverLoad = getClientConnections().size();
 			for(Entry<String, Connection> e: getConnections().entrySet()) {
@@ -226,7 +227,14 @@ public class Server extends Node {
 					Log("Message was not acknowledged, resending " + m.toString());
 					resendMessage(m);
 				}
-			}		
+			}
+
+			// Log load balance
+			if (it++ == 0) {
+				Log("L|" + serverLoad);
+				if (it > 5)
+					it = 0;
+			}
 			
 			this.canMove = true;
 			try { Thread.sleep(PULSE); } catch (InterruptedException e1) { }
