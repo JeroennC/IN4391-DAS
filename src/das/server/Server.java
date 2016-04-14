@@ -210,7 +210,7 @@ public class Server extends Node {
 					sendMessage(new PulseMessage(this, c.getAddress(), e.getKey() ));
 				} else {
 					ServerConnection sc = (ServerConnection) c; 
-					if(sc.getLastServerStatusTime() + 20*PULSE < getTime()) {
+					if(sc.getLastServerStatusTime() + 5*PULSE < getTime()) {
 						sendMessage(new ServerUpdateMessage(this, c.getAddress(), e.getKey(), serverLoad));
 						sc.setLastServerStatusTime(getTime());
 					}					
