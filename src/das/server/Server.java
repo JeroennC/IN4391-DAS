@@ -48,7 +48,7 @@ public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
 	public static final int PULSE = 1000;//ms
 	public static final String LOG_DIR = "log";
-	private static final int[] TSS_DELAYS = {0, 150, 500, 1000, 10000};
+	private static final int[] TSS_DELAYS = {0, 150, 500, 2500, 10000};
 	private static final int ACK_WAIT = 4000;//ms
 	
 	/* Server positioning */
