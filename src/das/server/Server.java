@@ -67,6 +67,7 @@ public class Server extends Node {
 	
 	static int responseTimeI = 0;
 	private Object rollBackObject;
+	private Object logWriteObject;
 	
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
@@ -78,6 +79,7 @@ public class Server extends Node {
 			if (i>0) trailingStates[i-1].setSlowerState(trailingStates[i]);
 		}
 		this.rollBackObject = new Object();
+		this.logWriteObject = new Object();
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
 		inbox = new ArrayList<Message>();
@@ -596,7 +598,9 @@ public class Server extends Node {
 	public void InitLog() {
 		try {
 			Files.deleteIfExists(Paths.get(Server.LOG_DIR + "/" + this.getName() + ".txt"));
-			new LogEntry(this.getName(), "S|Log created", this.getTime()).WriteToFile(this.getName() + ".txt");;
+			synchronized (logWriteObject) {
+				new LogEntry(this.getName(), "S|Log created", this.getTime()).WriteToFile(this.getName() + ".txt");;
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -604,13 +608,17 @@ public class Server extends Node {
 	
 	public void Log(String content) {
 		LogEntry e = new LogEntry(this.getName(), content, this.getTime());
-		e.WriteToFile(this.getName() + ".txt");
+		synchronized(logWriteObject) {
+			e.WriteToFile(this.getName() + ".txt");
+		}
 		logSender.add(e);
 	}
 	
 	public void receiveLogMessage(LogMessage m) {
 		// Write to log
-		m.getEntries().forEach(entry -> entry.WriteToFile(this.getName() + ".txt"));
+		synchronized (logWriteObject) {
+			m.getEntries().forEach(entry -> entry.WriteToFile(this.getName() + ".txt"));
+		}
 	}
 	
 	public void sendLog(List<LogEntry> logs) {
