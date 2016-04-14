@@ -118,7 +118,7 @@ public abstract class Message implements Serializable {
 		from.Print("Sendmessage "+this);
 		if(receiver == null)
 			return;
-		if(new Random(System.nanoTime()).nextInt(100) == 0) return;
+		//if(new Random(System.nanoTime()).nextInt(100) == 0) return;
 		new Thread() {
 			  public void run() { 
 				  try {
