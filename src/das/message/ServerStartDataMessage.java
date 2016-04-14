@@ -31,35 +31,35 @@ public class ServerStartDataMessage extends Message {
 
 	}
 
-	public Battlefield getBf() {
+	public synchronized Battlefield getBf() {
 		return bf;
 	}
 
-	public void setBf(Battlefield bf) {
+	public synchronized void setBf(Battlefield bf) {
 		this.bf = bf;
 	}
 
-	public Queue<StateCommand> getInbox() {
+	public synchronized Queue<StateCommand> getInbox() {
 		return inbox;
 	}
 
-	public void setInbox(Queue<StateCommand> inbox) {
+	public synchronized void setInbox(Queue<StateCommand> inbox) {
 		this.inbox = inbox;
 	}
 
-	public long getTime() {
+	public synchronized long getTime() {
 		return time;
 	}
 
-	public void setTime(long time) {
+	public synchronized void setTime(long time) {
 		this.time = time;
 	}
 	
-	public List<String> getLog() {
+	public synchronized List<String> getLog() {
 		return log;
 	}
 	
-	public void setLog(List<String> log) {
+	public synchronized void setLog(List<String> log) {
 		this.log = log;
 	}
 	

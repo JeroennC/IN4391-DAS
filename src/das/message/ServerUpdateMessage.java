@@ -18,11 +18,11 @@ public class ServerUpdateMessage extends Message {
 		((Server) node).receiveServerUpdateMessage(this);
 	}
 
-	public int getServerLoad() {
+	public synchronized int getServerLoad() {
 		return serverLoad;
 	}
 
-	public void setServerLoad(int serverLoad) {
+	public synchronized void setServerLoad(int serverLoad) {
 		this.serverLoad = serverLoad;
 	}
 
