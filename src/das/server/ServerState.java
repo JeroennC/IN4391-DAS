@@ -153,41 +153,43 @@ public class ServerState implements Runnable {
 	}
 	
 	public void rollback(Queue<StateCommand> q) {
-		synchronized (inbox) {
-			inbox = q;
-		}
-		synchronized(inbox) {
-			synchronized (bf) {
-				// TODO: Make this neater, For now, all synchronized
-				StateCommand firstCommand = inbox.peek();
-				int executed = 0;
-				// Get up to date
-				while(firstCommand != null) {
-					Thread.interrupted();
-					firstCommand = null;
-					firstCommand = inbox.peek();
-					if(firstCommand == null) {
-						break;
-					} else if(firstCommand.getTimestamp() <= getTime()) {
-						if (!firstCommand.isValid()) {
+		synchronized(server.getRollBackObject()) {
+			synchronized (inbox) {
+				inbox = q;
+			}
+			synchronized(inbox) {
+				synchronized (bf) {
+					// TODO: Make this neater, For now, all synchronized
+					StateCommand firstCommand = inbox.peek();
+					int executed = 0;
+					// Get up to date
+					while(firstCommand != null) {
+						Thread.interrupted();
+						firstCommand = null;
+						firstCommand = inbox.peek();
+						if(firstCommand == null) {
+							break;
+						} else if(firstCommand.getTimestamp() <= getTime()) {
+							if (!firstCommand.isValid()) {
+								inbox.remove(firstCommand);
+								//TODO add to other list
+								continue;
+							}
+							// Execute command
+							if(deliver(firstCommand) != null) {
+								executed++;
+								lastExecutedTime = Math.max(firstCommand.getTimestamp(), lastExecutedTime);
+								// Stamp command nr
+								firstCommand.setCommandNr(nextCommandNr++);
+							} 
 							inbox.remove(firstCommand);
-							//TODO add to other list
-							continue;
-						}
-						// Execute command
-						if(deliver(firstCommand) != null) {
-							executed++;
-							lastExecutedTime = Math.max(firstCommand.getTimestamp(), lastExecutedTime);
-							// Stamp command nr
-							firstCommand.setCommandNr(nextCommandNr++);
-						} 
-						inbox.remove(firstCommand);
-					} else {
-						break;
-					}	
+						} else {
+							break;
+						}	
+					}
+					//Print("And we're back, executed: " + executed);
+					server.Log("R|" + this.delay + "|" + executed);
 				}
-				//Print("And we're back, executed: " + executed);
-				server.Log("R|" + this.delay + "|" + executed);
 			}
 		}
 	}
@@ -196,25 +198,27 @@ public class ServerState implements Runnable {
 	 * Take the state + inbox from the faster state
 	 */
 	public void rollback() {
-		// Care, always acquire locks in this order, no deadlocks :)
-		Data d = null;
-		synchronized (inbox) {
-			synchronized (bf) {
-				if(fasterState == null)
-					d = slowerState.bf.difference(bf);
-				bf = slowerState.cloneBattlefield();
-				nextCommandNr = slowerState.nextCommandNr;
-				rollback(slowerState.cloneInbox());
+		synchronized(server.getRollBackObject()) {
+			// Care, always acquire locks in this order, no deadlocks :)
+			Data d = null;
+			synchronized (inbox) {
+				synchronized (bf) {
+					if(fasterState == null)
+						d = slowerState.bf.difference(bf);
+					bf = slowerState.cloneBattlefield();
+					nextCommandNr = slowerState.nextCommandNr;
+					rollback(slowerState.cloneInbox());
+				}
 			}
+			
+			runningThread.interrupt();
+			
+			// Cascade rollback, otherwise inconsistencies are not found (because the original inconsistency is not processed again)
+			if (fasterState != null) 
+				fasterState.rollback();
+			else if(d != null)
+				server.sendRollback(d);
 		}
-		
-		runningThread.interrupt();
-		
-		// Cascade rollback, otherwise inconsistencies are not found (because the original inconsistency is not processed again)
-		if (fasterState != null) 
-			fasterState.rollback();
-		else if(d != null)
-			server.sendRollback(d);
 	}
 	
 	public long getTime() {

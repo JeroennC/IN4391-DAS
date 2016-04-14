@@ -66,6 +66,7 @@ public class Server extends Node {
 	private List<Message> inbox;
 	
 	static int responseTimeI = 0;
+	private Object rollBackObject;
 	
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
@@ -76,6 +77,7 @@ public class Server extends Node {
 			if (i>0) trailingStates[i].setFasterState(trailingStates[i-1]);
 			if (i>0) trailingStates[i-1].setSlowerState(trailingStates[i]);
 		}
+		this.rollBackObject = new Object();
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
 		inbox = new ArrayList<Message>();
@@ -656,5 +658,9 @@ public class Server extends Node {
 	public Battlefield getBattlefield() throws RemoteException {
 		// TODO maybe just do getBattlefield here?
 		return trailingStates[0].cloneBattlefield();
+	}
+
+	public Object getRollBackObject() {
+		return rollBackObject;
 	}
 }
