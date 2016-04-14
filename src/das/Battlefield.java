@@ -41,7 +41,7 @@ public class Battlefield implements Serializable {
 		boolean placed;
 		for (int i = 0; i < INITIAL_DRAGON_COUNT; i++) {
 			int hp = rand.nextInt(51) + 50;
-			int ap = 2;//rand.nextInt(16) + 5;
+			int ap = rand.nextInt(16) + 5;
 			placed = false;
 			// 20 tries of placement
 			for (int j = 0; j < 20; j++ ){

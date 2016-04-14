@@ -48,7 +48,7 @@ public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
 	public static final int PULSE = 1000;//ms
 	public static final String LOG_DIR = "log";
-	private static final int[] TSS_DELAYS = {0, 150, 500, 2500, 10000};
+	private static final int[] TSS_DELAYS = {0, 100, 500, 2500, 10000};
 	private static final int ACK_WAIT = 4000;//ms
 	
 	/* Server positioning */
@@ -210,7 +210,7 @@ public class Server extends Node {
 					sendMessage(new PulseMessage(this, c.getAddress(), e.getKey() ));
 				} else {
 					ServerConnection sc = (ServerConnection) c; 
-					if(sc.getLastServerStatusTime() + 20*PULSE < getTime()) {
+					if(sc.getLastServerStatusTime() + 5*PULSE < getTime()) {
 						sendMessage(new ServerUpdateMessage(this, c.getAddress(), e.getKey(), serverLoad));
 						sc.setLastServerStatusTime(getTime());
 					}					
@@ -273,7 +273,7 @@ public class Server extends Node {
 		boolean fromMyself = m.getFrom_id().equals(this.getName());
 		if(fromClient) {
 			responseTimeI++;
-			if(responseTimeI > getClientConnections().size() * 5) {
+			if(responseTimeI > getClientConnections().size() ) {
 				Log("E|"+m.getFrom_id()+"|"+m.getID()+"|"+m.getResponseTime());
 				responseTimeI = 0;
 			}
