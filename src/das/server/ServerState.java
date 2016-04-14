@@ -141,6 +141,9 @@ public class ServerState implements Runnable {
 				d.setPlayer(u);
 			}
 		}
+		if(slowerState == null) { //Last trailing state
+			server.Log("A|"+sc.getTimestamp() +"|"+sc.getMessage().getFrom_id()+"|"+sc.getMessage().getID()+"|"+ a.getExecuterId() +"|" + a.getClass()+"|"+sc.getCommandNr());
+		}
 		return d;
 	}
 	
