@@ -92,6 +92,10 @@ public class ServerState implements Runnable {
 									+ " <> " + firstCommand.getCommands()[firstCommand.getPosition() - 1].getCommandNr());
 							needsRollback = true;
 						}
+						if(slowerState == null) { //Last trailing state
+							Action a = firstCommand.getMessage().getAction();
+							server.Log("A|"+firstCommand.getTimestamp() +"|"+firstCommand.getMessage().getFrom_id()+"|"+firstCommand.getMessage().getID()+"|"+ a.getExecuterId() +"|" + a.getClass()+"|"+firstCommand.getCommandNr());
+						}
 					} else {
 						needsRollback = true;
 					}
@@ -140,9 +144,6 @@ public class ServerState implements Runnable {
 				d.setUpdatedUnits(bf.getUnitList());
 				d.setPlayer(u);
 			}
-		}
-		if(slowerState == null) { //Last trailing state
-			server.Log("A|"+sc.getTimestamp() +"|"+sc.getMessage().getFrom_id()+"|"+sc.getMessage().getID()+"|"+ a.getExecuterId() +"|" + a.getClass()+"|"+sc.getCommandNr());
 		}
 		return d;
 	}
