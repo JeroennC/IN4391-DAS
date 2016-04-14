@@ -18,11 +18,11 @@ public class InitMessage extends Message {
 		((Server) node).receiveInitMessage(this);
 	}
 
-	public int getPlayerId() {
+	public synchronized int getPlayerId() {
 		return playerId;
 	}
 
-	public void setPlayerId(int playerId) {
+	public synchronized void setPlayerId(int playerId) {
 		this.playerId = playerId;
 	}
 

@@ -42,15 +42,15 @@ public class ActionMessage extends Message {
 		((Server) node).receiveActionMessage(this);
 	}
 
-	public Action getAction() {
+	public synchronized Action getAction() {
 		return action;
 	}
 
-	public long getResponseTime() {
+	public synchronized long getResponseTime() {
 		return responseTime;
 	}
 
-	public void setResponseTime(long responseTime) {
+	public synchronized void setResponseTime(long responseTime) {
 		this.responseTime = responseTime;
 	}
 

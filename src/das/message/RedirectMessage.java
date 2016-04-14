@@ -19,11 +19,11 @@ public class RedirectMessage extends Message {
 
 	}
 
-	public int getServer_id() {
+	public synchronized int getServer_id() {
 		return server_id;
 	}
 
-	public void setServer_id(int server_id) {
+	public synchronized void setServer_id(int server_id) {
 		this.server_id = server_id;
 	}
 

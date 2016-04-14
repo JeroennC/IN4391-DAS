@@ -111,7 +111,7 @@ public abstract class Message implements Serializable {
 		acks = m.getAcks();
 	}
 		
-	public void send() {
+	public synchronized void send() {
 		if(from instanceof Server && timestamp == 0)
 			setTimestamp(((Server) from).getTime());
 		from.Print("Sendmessage "+this);
@@ -128,15 +128,15 @@ public abstract class Message implements Serializable {
 		}.start();
 	}
 	
-	public void setID(int id) {
+	public synchronized void setID(int id) {
 		message_id = id;
 	}
 	
-	public int getID() {
+	public synchronized int getID() {
 		return message_id;
 	}
 	
-	public void addTail(List<Message> list) {
+	public synchronized void addTail(List<Message> list) {
 		messageTail = (Message[]) list.toArray(new Message[list.size()]);
 	}
 	
@@ -166,53 +166,53 @@ public abstract class Message implements Serializable {
 		}
 	}
 
-	public long getTimestamp() {
+	public synchronized long getTimestamp() {
 		return timestamp;
 	}
 
-	public void setTimestamp(long timestamp) {
+	public synchronized void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
 	}
 
-	public String getFrom_id() {
+	public synchronized String getFrom_id() {
 		return from_id;
 	}
 	
-	public String getReceiver_id() {
+	public synchronized String getReceiver_id() {
 		return receiver_id;
 	}
 	
-	public Node getFrom() {
+	public synchronized Node getFrom() {
 		return from;
 	}
 
-	public Address getFromAddress() {
+	public synchronized Address getFromAddress() {
 		return fromAddress;
 	}
 
-	public List<Integer> getAcks() {
+	public synchronized List<Integer> getAcks() {
 		return acks;
 	}
 
-	public void setAcks(List<Integer> acks) {
+	public synchronized void setAcks(List<Integer> acks) {
 		this.acks = acks;
 	}
 
-	public Address getReceiverAddress() {
+	public synchronized Address getReceiverAddress() {
 		return receiverAddress;
 	}
 
-	public void setReceiverAddress(Address receiverAddress) {
+	public synchronized void setReceiverAddress(Address receiverAddress) {
 		this.receiverAddress = receiverAddress;
 	}
 	
 	@Override
-	public String toString() {
+	public synchronized String toString() {
 		return getClass().getName()+ "["+message_id+", " + from_id + " > " +receiver_id + "]";
 	}
 
 	@Override
-	public int hashCode() {
+	public synchronized int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((from_id == null) ? 0 : from_id.hashCode());
@@ -221,7 +221,7 @@ public abstract class Message implements Serializable {
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public synchronized boolean equals(Object obj) {
 		if (this == obj)
 			return true;
 		if (obj == null)

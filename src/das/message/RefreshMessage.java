@@ -16,7 +16,7 @@ public class RefreshMessage extends Message {
 		this.requestedUnits = requestedUnits;
 	}
 	
-	public List<Unit> getRequestedUnits() {
+	public synchronized List<Unit> getRequestedUnits() {
 		return requestedUnits;
 	}
 

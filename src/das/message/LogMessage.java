@@ -21,15 +21,15 @@ public class LogMessage extends Message {
 		this.entries = e;
 	}
 	
-	public void AddEntry(LogEntry e) {
+	public synchronized void AddEntry(LogEntry e) {
 		entries.add(e);
 	}
 	
-	public void AddEntry(String source, String content, long timestamp) {
+	public synchronized void AddEntry(String source, String content, long timestamp) {
 		entries.add(new LogEntry(source,content,timestamp));
 	}
 	
-	public List<LogEntry> getEntries() {
+	public synchronized List<LogEntry> getEntries() {
 		return entries;
 	}
 	

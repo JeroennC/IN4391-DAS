@@ -19,11 +19,11 @@ public class DenyMessage extends Message {
 
 	}
 
-	public int getDeniedMessage_id() {
+	public synchronized int getDeniedMessage_id() {
 		return deniedMessage_id;
 	}
 
-	public void setDeniedMessage_id(int deniedMessage_id) {
+	public synchronized void setDeniedMessage_id(int deniedMessage_id) {
 		this.deniedMessage_id = deniedMessage_id;
 	}
 
