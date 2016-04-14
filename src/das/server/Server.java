@@ -234,9 +234,9 @@ public class Server extends Node {
 			// Log load balance
 			if (it++ == 0) {
 				Log("L|" + serverLoad);
-				if (it > 5)
-					it = 0;
 			}
+			if (it > 5)
+				it = 0;
 			
 			this.canMove = true;
 			try { Thread.sleep(PULSE); } catch (InterruptedException e1) { }
