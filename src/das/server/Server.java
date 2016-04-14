@@ -65,6 +65,8 @@ public class Server extends Node {
 	private ServerState[] trailingStates;
 	private List<Message> inbox;
 	
+	static int responseTimeI = 0;
+	
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
 		state = State.Disconnected;
@@ -265,6 +267,13 @@ public class Server extends Node {
 	public synchronized void receiveActionMessage(ActionMessage m) {
 		boolean fromClient = m.getFrom_id().startsWith("Client");
 		boolean fromMyself = m.getFrom_id().equals(this.getName());
+		if(fromClient) {
+			responseTimeI++;
+			if(responseTimeI > getClientConnections().size() * 5) {
+				Log("E|"+m.getFrom_id()+"|"+m.getID()+"|"+m.getResponseTime());
+				responseTimeI = 0;
+			}
+		}
 		//boolean first = (m.getAction() instanceof NewPlayer);
 		if(/*first && */(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())))) {
 			if(fromClient){

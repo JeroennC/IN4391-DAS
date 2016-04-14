@@ -1,15 +1,28 @@
 package das;
 import java.rmi.RemoteException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import das.action.Action;
 import das.action.Heal;
 import das.action.Hit;
 import das.action.Move;
 import das.action.MoveType;
-import das.message.*;
+import das.message.ActionMessage;
+import das.message.Address;
+import das.message.ConnectMessage;
+import das.message.DataMessage;
+import das.message.DenyMessage;
+import das.message.InitMessage;
+import das.message.Message;
+import das.message.PingMessage;
+import das.message.PulseMessage;
+import das.message.RedirectMessage;
+import das.message.RefreshMessage;
+import das.message.RetransmitMessage;
 import das.server.Server;
 
 public class Client extends Node {
@@ -33,6 +46,8 @@ public class Client extends Node {
 	private volatile List<Integer> receivedPastExpected;
 	private volatile long lastTimestamp;
 	private int retransmitRequested;
+	private Map<ActionMessage, Long> actionTimeStamp;
+	private long responseTime;
 	
 	private Battlefield bf;
 	private volatile Unit player;
@@ -41,6 +56,8 @@ public class Client extends Node {
 		super(id, "Client_"+id);
 		this.proposed_server_id = -1;
 		bf = new Battlefield();
+		actionTimeStamp = new HashMap<ActionMessage, Long>();
+		responseTime = -2;
 		pulseTimer = (new Thread() {
 			public void run() {
 				while(state != Client.State.Exit) {
@@ -98,7 +115,7 @@ public class Client extends Node {
 					Action a = player.isAlive() ? doMove() : null;
 					if(a != null) {
 						synchronized(lastActionAccess) {
-							lastActionMessage = new ActionMessage(this, serverAddress, server_id, a);
+							lastActionMessage = new ActionMessage(this, serverAddress, server_id, a, responseTime);
 						}
 						sendMessage(lastActionMessage);
 					}
@@ -203,6 +220,13 @@ public class Client extends Node {
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
 		if(!m.getFrom_id().equals("Server_"+server_id));
+		if(m instanceof DataMessage) {
+			DataMessage dm = (DataMessage) m;
+			ActionMessage a = actionTimeStamp.keySet().parallelStream().filter( am -> am.getID() == dm.getActionMessage_id()).findFirst().orElse(null);
+			if(a != null) {
+				responseTime = (System.currentTimeMillis() - actionTimeStamp.get(a));
+			}				
+		}
 		lastTimestamp = m.getTimestamp() > lastTimestamp ? m.getTimestamp() : lastTimestamp;
 		if(((state == State.Disconnected || state == State.Initialization) && m.getID() > expectedMessageID + 20) || m.getID() > expectedMessageID + 30)
 			return;
@@ -403,6 +427,8 @@ public class Client extends Node {
 		if(sentMessages.size() >= Message.FWD_COUNT)
 			sentMessages.remove(0);
 		sentMessages.add(m);
+		if(m instanceof ActionMessage)
+			actionTimeStamp.put((ActionMessage) m, System.currentTimeMillis());
 		m.send();
 	}
 	
