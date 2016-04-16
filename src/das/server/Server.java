@@ -461,7 +461,7 @@ public class Server extends Node {
 		Print("Received message: " + m.toString());
 		//TODO for client messages receive in order of sending (so with messages in tail received first)
 		if(m.getFrom_id().startsWith("Server")) {
-			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
+			if(!(m instanceof NewServerMessage || m instanceof PingMessage || m instanceof ServerStartDataMessage))
 				updateTimer(m);
 			if (m.getAcks() != null && !m.getAcks().isEmpty())
 				unacknowledgedMessages.removeIf(n -> n.getReceiver_id().equals(m.getFrom_id()) && m.getAcks().contains(n.getID()));
