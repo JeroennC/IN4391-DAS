@@ -30,14 +30,13 @@ public class Client extends Node {
 	
 	private static final long EXPIRATION_TIME = 10 * 1000L; // 10 seconds
 	private int proposed_server_id;
-	//TODO which variables are volatile?
 	private volatile int server_id;
 	private volatile Address serverAddress;
 	private volatile boolean _canMove;
 	private volatile Thread pulseTimer;
 	private List<Message> sentMessages;
 	private volatile List<DataMessage> dataMessageBuffer;
-	private List<ActionMessage> sentActionMessages;
+	//private List<ActionMessage> sentActionMessages;
 	private ActionMessage lastActionMessage;
 	private Object lastActionAccess;
 	private int lastMessageSentID;
@@ -81,6 +80,9 @@ public class Client extends Node {
 		this.proposed_server_id = proposed_server_id;
 	}
 	
+	/**
+	 * Resets all client variables
+	 */
 	public synchronized void reset() {
 		synchronized (pulseTimer) {
 			if(pulseTimer != null && !pulseTimer.isAlive()) pulseTimer.interrupt();
@@ -98,6 +100,9 @@ public class Client extends Node {
 		retransmitRequested = 0;
 	}
 
+	/**
+	 * Starts client connection and main action loop
+	 */
 	@Override
 	public void run() {
 		//Sleep so that not all clients start at the same moment.
@@ -137,17 +142,18 @@ public class Client extends Node {
 					it++;
 				}
 			} 
-			// TODO sleep for a little time? Busy waiting is a bit much
 			try {Thread.sleep(100);} catch (InterruptedException e) {}
 		}
-		// TODO Disconnect
+		// Disconnect
 		Print("Game is over.");
 		stopPulseTimer();
 		close();
 		Main.removeThread(this.getName());
 	}
 	
-	// Synchronized on battlefield so other threads don't mess things up
+	/**
+	 * Performs a move if possible
+	 */
 	public Action doMove() {
 		synchronized(bf) {
 			_canMove = false;
@@ -204,11 +210,14 @@ public class Client extends Node {
 		}
 	}
 	
+	/**
+	 * Connects to a random server
+	 */
 	public void connect() {
 		reset();
 		server_id = (int) (Math.random() * Main.ADDRESSES.size());
 		// DEV:
-		server_id = 1;
+		//server_id = 1;
 		if (proposed_server_id != - 1) server_id = proposed_server_id;
 		serverAddress = Main.ADDRESSES.get(server_id);
 		Print("Try to connect with server "+(server_id));
@@ -216,6 +225,9 @@ public class Client extends Node {
 		resetPulseTimer();
 	}
 
+	/**
+	 * Main receival of messages, sets overall message variables
+	 */
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		resetPulseTimer();
@@ -255,23 +267,36 @@ public class Client extends Node {
 		m.receive(this);		
 	}
 	
+	/**
+	 * Allow self to move
+	 */
 	public void receivePulse(PulseMessage m) {
 		_canMove = true;		
 	}
 	
+	/**
+	 * Resets the pulse
+	 */
 	private void resetPulseTimer() {
 		synchronized(pulseTimer) {
 			if(pulseTimer != null && pulseTimer.isAlive()) pulseTimer.interrupt();
 		}
 	}
 	
+	/**
+	 * Stops the pulse
+	 */
 	private void stopPulseTimer() {
 		synchronized(pulseTimer) {
 			if(pulseTimer != null && pulseTimer.isAlive()) pulseTimer.interrupt();
 		}
 	}
 	
+	/**
+	 * Handles DenyMessages, which are not used in the current version
+	 */
 	public void receiveDenial(DenyMessage dm) {
+		/*
 		//sentActionMessages.removeIf(n -> n.getID() == dm.getDeniedMessage_id());
 		boolean reinit = false;
 		synchronized(lastActionAccess) {
@@ -340,15 +365,21 @@ public class Client extends Node {
 			_canMove = true;
 		}
 		if (reinit) {
-			// TODO Unexpected denial, request re-initialization
 			Print("!!!!! Reinit should happen");
 		}
+		*/
 	}
 	
+	/**
+	 * Sends a ping back to the sender
+	 */
 	public void receivePingMessage(PingMessage m) {
 		sendMessage(new PingMessage(this, serverAddress, server_id));
 	}
 	
+	/**
+	 * Redirects itself to another server and connects
+	 */
 	public void receiveRedirectMessage(RedirectMessage m) {
 		if(state == State.Running)
 			reset();
@@ -361,6 +392,9 @@ public class Client extends Node {
 		sendMessage(new InitMessage(this, serverAddress, server_id, playerId));
 	}
 	
+	/**
+	 * Receives the data from DataMessage and attempts to execute
+	 */
 	public void receiveData(DataMessage m) {
 		//sentActionMessages.removeIf(n -> n.getID() == m.getActionMessage_id());
 		if(m.getDatamessage_id() > expectedDataMessageID + 20) {
@@ -381,6 +415,9 @@ public class Client extends Node {
 		}
 	}
 	
+	/**
+	 * Executes a data message, updates the battlefield with the data in the message
+	 */
 	public void deliverData(DataMessage m) {
 		synchronized(bf) {
 			Print("Received data: "+m.getData());
@@ -409,10 +446,7 @@ public class Client extends Node {
 					u.setTimestamp(m.getTimestamp());
 					bf.killUnit(u);
 				}
-			}
-			//if (player != null && !player.isAlive())
-				//changeState(State.Exit);
-				
+			}	
 		}
 		if(state == State.Initialization) {
 			//for(ActionMessage am: sentActionMessages)
@@ -421,6 +455,9 @@ public class Client extends Node {
 		}
 	}
 	
+	/**
+	 * Sends a message to destination
+	 */
 	public synchronized void sendMessage(Message m) {
 		m.setID(lastMessageSentID++);
 		m.addTail(sentMessages);
@@ -432,10 +469,16 @@ public class Client extends Node {
 		m.send();
 	}
 	
+	/**
+	 * Sets this client's player
+	 */
 	public void setPlayer(Unit player) {
 		this.player = player;
 	}
 	
+	/**
+	 * Returns the local battlefield
+	 */
 	public Battlefield getBattlefield() throws RemoteException {
 		return bf;
 	}
