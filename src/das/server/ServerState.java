@@ -14,10 +14,12 @@ import das.action.DeletePlayer;
 import das.action.Heal;
 import das.action.Hit;
 import das.action.Move;
-import das.action.MoveType;
 import das.action.NewPlayer;
 import das.message.Data;
 
+/**
+ * Runnable class running one trailing state, continuously executes actions at set delay
+ */
 public class ServerState implements Runnable {
 	private Server server;
 	private Battlefield bf;
@@ -43,11 +45,17 @@ public class ServerState implements Runnable {
 		inbox = new PriorityQueue<StateCommand>(1, comparator);
 	}
 	
+	/**
+	 * Initialize the state to battlefield
+	 */
 	public void init(Battlefield battlefield) {
 		// Deep object copy, new clone of battlefield
 		this.bf = battlefield.clone();
 	}
 	
+	/**
+	 * Main loop executing all actions
+	 */
 	@Override
 	public void run() {
 		runningThread = Thread.currentThread();
@@ -76,7 +84,6 @@ public class ServerState implements Runnable {
 				if (!firstCommand.isValid()) {
 					synchronized(inbox) {
 						inbox.remove(firstCommand);
-						//TODO add to other list
 					}
 					continue;
 				}
@@ -102,7 +109,6 @@ public class ServerState implements Runnable {
 				}
 				synchronized(inbox) {
 					inbox.remove(firstCommand);
-					//TODO add to other list
 				}
 				if (needsRollback) {
 					generateRollback = false;
@@ -116,6 +122,9 @@ public class ServerState implements Runnable {
 		}
 	}
 	
+	/**
+	 * Execute an action if possible, returns the changed units 
+	 */
 	public Data deliver(StateCommand sc) {
 		Action a = sc.getMessage().getAction();
 		// Check if action is possible, if not, rollback previous state, and invalidate the commands for later states
@@ -148,10 +157,16 @@ public class ServerState implements Runnable {
 		return d;
 	}
 	
+	/**
+	 * Returns whether an action is possible/allowed
+	 */
 	public boolean isPossible(Action action) {
 		return bf.isActionAllowed(action);
 	}
 	
+	/**
+	 * Sets the states inbox and executes all actions up to the current state time
+	 */
 	public void rollback(Queue<StateCommand> q) {
 		synchronized(server.getRollBackObject()) {
 			synchronized (inbox) {
@@ -159,7 +174,6 @@ public class ServerState implements Runnable {
 			}
 			synchronized(inbox) {
 				synchronized (bf) {
-					// TODO: Make this neater, For now, all synchronized
 					StateCommand firstCommand = inbox.peek();
 					int executed = 0;
 					// Get up to date
@@ -172,7 +186,6 @@ public class ServerState implements Runnable {
 						} else if(firstCommand.getTimestamp() <= getTime()) {
 							if (!firstCommand.isValid()) {
 								inbox.remove(firstCommand);
-								//TODO add to other list
 								continue;
 							}
 							// Execute command
@@ -187,7 +200,6 @@ public class ServerState implements Runnable {
 							break;
 						}	
 					}
-					//Print("And we're back, executed: " + executed);
 					server.Log("R|" + this.delay + "|" + executed);
 				}
 			}
@@ -221,6 +233,9 @@ public class ServerState implements Runnable {
 		}
 	}
 	
+	/**
+	 * Returns the state's time
+	 */
 	public long getTime() {
 		return server.getTime() - delay;
 	}
@@ -241,6 +256,9 @@ public class ServerState implements Runnable {
 		this.slowerState = slowerState;
 	}
 
+	/**
+	 * Receive a new action, add it to the inbox or execute it immediately
+	 */
 	public Data receive(StateCommand sc) {
 		if (slowerState == null && sc.getTimestamp() < lastExecutedTime) {
 			// Last trailing state is possibly inconsistent
@@ -279,6 +297,9 @@ public class ServerState implements Runnable {
 		return nextCommandNr;
 	}
 	
+	/**
+	 * Clone the inbox, not deep clone, used for rollback
+	 */
 	public synchronized Queue<StateCommand> cloneInbox() {
 		Queue<StateCommand> result = new PriorityQueue<StateCommand>(1, comparator);
 		if (fasterState == null) return result;
@@ -321,6 +342,9 @@ public class ServerState implements Runnable {
 		this.state = state;
 	}
 
+	/**
+	 * Returns actual unit information around a denied action, to ensure the client has a correct state around it
+	 */
 	public Data getDeniedData(Action action) {
 		Data d = new Data();
 		synchronized(bf) {
