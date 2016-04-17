@@ -4,6 +4,9 @@ import java.io.Serializable;
 
 import das.message.ActionMessage;
 
+/**
+ * StateCommands contain an action linked to all trailing states
+ */
 public class StateCommand implements Serializable {
 	private static final long serialVersionUID = -4010748658507289583L;
 	
@@ -27,10 +30,16 @@ public class StateCommand implements Serializable {
 		valid = true;
 	}
 	
+	/**
+	 * Sets this action to invalid, will not be executed
+	 */
 	public synchronized void Invalidate() {
 		valid = false;
 	}
-	
+
+	/**
+	 * Sets all actions in slower states to invalid, will not be executed
+	 */
 	public void InvalidateUpwards() {
 		for (int i = myPosition + 1; i < commands.length; i++ ){
 			commands[i].Invalidate();
@@ -70,7 +79,6 @@ public class StateCommand implements Serializable {
 	}
 	
 	public boolean isConsistent() {
-		// TODO could be more sophisticated, is now very strict
 		return getPreviousCommand() == null || getCommandNr() == getPreviousCommand().getCommandNr();
 	}
 	
