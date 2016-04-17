@@ -6,6 +6,10 @@ import java.util.List;
 
 import das.server.Server;
 
+/**
+ * Runnable class that collects Log entries and periodically (waitTime ms) sends the content to all other servers
+ *
+ */
 public class LogSender implements Runnable{
 	private Server server;
 	private List<LogEntry> logStash;
@@ -27,6 +31,9 @@ public class LogSender implements Runnable{
 		}
 	}
 	
+	/**
+	 * Start periodically sending logs
+	 */
 	@Override
 	public void run() {
 		List<LogEntry> sendList = new LinkedList<LogEntry>();
