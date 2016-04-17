@@ -4,6 +4,9 @@ import java.rmi.RemoteException;
 
 import das.message.Message;
 
+/**
+ * Remote interface for nodes
+ */
 public interface Node_RMI extends Remote {
 	public void receiveMessage(Message m) throws RemoteException;
 	public Battlefield getBattlefield() throws RemoteException;
