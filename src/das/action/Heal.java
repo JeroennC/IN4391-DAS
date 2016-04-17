@@ -1,5 +1,8 @@
 package das.action;
 
+/**
+ * Action for healing a player on the battlefield
+ */
 public class Heal extends Action {
 	private static final long serialVersionUID = -382625101848738567L;
 	

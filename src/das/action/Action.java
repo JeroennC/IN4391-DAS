@@ -2,6 +2,9 @@ package das.action;
 
 import java.io.Serializable;
 
+/**
+ * Abstract base class for all actions
+ */
 public abstract class Action implements Serializable {
 	private static final long serialVersionUID = -8729632997383817951L;
 	private int executer_id;
