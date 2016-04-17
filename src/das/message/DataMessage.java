@@ -3,7 +3,9 @@ import das.Client;
 import das.Node_RMI;
 import das.server.Server;
 
-
+/**
+ * Message for sending Data from Server to Client
+ */
 public class DataMessage extends Message {
 	private static final long serialVersionUID = -8814316082059816216L;
 	private Data data;
@@ -23,32 +25,32 @@ public class DataMessage extends Message {
 
 	}
 
-	public int getDatamessage_id() {
+	public synchronized int getDatamessage_id() {
 		return datamessage_id;
 	}
 
-	public void setDatamessage_id(int datamessage_id) {
+	public synchronized void setDatamessage_id(int datamessage_id) {
 		this.datamessage_id = datamessage_id;
 	}
 
-	public Data getData() {
+	public synchronized Data getData() {
 		return data;
 	}
 
-	public void setData(Data data) {
+	public synchronized void setData(Data data) {
 		this.data = data;
 	}
 
-	public int getActionMessage_id() {
+	public synchronized int getActionMessage_id() {
 		return actionMessage_id;
 	}
 
-	public void setActionMessage_id(int actionMessage_id) {
+	public synchronized void setActionMessage_id(int actionMessage_id) {
 		this.actionMessage_id = actionMessage_id;
 	}
 	
 	@Override
-	public String toString() {
+	public synchronized String toString() {
 		return super.toString() + "{"+getDatamessage_id()+"}";
 	}
 }

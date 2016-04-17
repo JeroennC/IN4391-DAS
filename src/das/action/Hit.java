@@ -1,5 +1,8 @@
 package das.action;
 
+/**
+ * Action for hitting a player on the battlefield
+ */
 public class Hit extends Action {
 	private static final long serialVersionUID = -5433425456504865747L;
 	

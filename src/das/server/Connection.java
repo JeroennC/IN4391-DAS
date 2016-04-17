@@ -8,7 +8,10 @@ import java.util.Queue;
 import das.message.Address;
 import das.message.Message;
 
-
+/**
+ * Base connection class, contains basic information on a connection to another node 
+ *
+ */
 public abstract class Connection {
 	private int lastMessageSentID;
 	private Address address;
@@ -42,6 +45,9 @@ public abstract class Connection {
 		return new LinkedList<Integer>();
 	}
 	
+	/**
+	 * Adds Message m to the sent message buffer
+	 */
 	public void addMessage(Message m) {
 		while(sentMessages.size() >= maxQueueSize)
 			sentMessages.poll();

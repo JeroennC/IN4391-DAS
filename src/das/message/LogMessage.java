@@ -7,6 +7,9 @@ import das.Node_RMI;
 import das.log.LogEntry;
 import das.server.Server;
 
+/**
+ * Message for sending a collection of logs from Server to Server
+ */
 public class LogMessage extends Message {
 	private static final long serialVersionUID = 5868198204479026835L;
 	private List<LogEntry> entries;
@@ -21,15 +24,15 @@ public class LogMessage extends Message {
 		this.entries = e;
 	}
 	
-	public void AddEntry(LogEntry e) {
+	public synchronized void AddEntry(LogEntry e) {
 		entries.add(e);
 	}
 	
-	public void AddEntry(String source, String content, long timestamp) {
+	public synchronized void AddEntry(String source, String content, long timestamp) {
 		entries.add(new LogEntry(source,content,timestamp));
 	}
 	
-	public List<LogEntry> getEntries() {
+	public synchronized List<LogEntry> getEntries() {
 		return entries;
 	}
 	

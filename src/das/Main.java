@@ -19,6 +19,9 @@ import das.gui.ServerViewer;
 import das.message.Address;
 import das.server.Server;
 
+/**
+ * The main executable to launch servers and clients
+ */
 @SuppressWarnings("deprecation")
 public class Main {
 	private static class NodeRef {
@@ -191,6 +194,7 @@ public class Main {
 	/**
 	 * Print all running threads
 	 */
+	@SuppressWarnings("unused")
 	private static void printRunningThreads() {
 		Set<Thread> threads = Thread.getAllStackTraces().keySet();
 		for (Thread t : threads) {
@@ -240,6 +244,9 @@ public class Main {
 		return registry;
 	}
 	
+	/**
+	 * Bind an object to the RMI registry
+	 */
 	public static Node registerObject(Node n) {
 		try {
 			getRegistry().rebind(n.getName(), n);
@@ -248,7 +255,10 @@ public class Main {
 		}
 		return n;
 	}
-
+	
+	/**
+	 * Unbind an object from the RMI registry
+	 */
 	public static void unregisterObject(Node node) {
 		try {
 			UnicastRemoteObject.unexportObject(node, true);

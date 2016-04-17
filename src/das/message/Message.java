@@ -1,7 +1,6 @@
 package das.message;
 import java.io.Serializable;
 import java.net.MalformedURLException;
-import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
@@ -13,10 +12,16 @@ import das.Node;
 import das.Node_RMI;
 import das.server.Server;
 
+/**
+ * Base extendible Message class, handles RMI object finding
+ */
 public abstract class Message implements Serializable {
 	private static final long serialVersionUID = 5970408991964088527L;
 	public static final int FWD_COUNT = 3;
 	
+	/**
+	 * Private class used to store Node information
+	 */
 	private static class NodeComponent {
 		Address address;
 		String name;
@@ -98,6 +103,9 @@ public abstract class Message implements Serializable {
 		this.receiver_id = id;		
 	}
 	
+	/**
+	 * Create a new message based on m
+	 */
 	protected Message(Message m) {
 		message_id = m.getID();
 		fromAddress = m.getFromAddress();
@@ -110,13 +118,17 @@ public abstract class Message implements Serializable {
 		timestamp = m.getTimestamp();
 		acks = m.getAcks();
 	}
-		
-	public void send() {
+	
+	/**
+	 * Start a new thread asynchronously sending the message to the message receiver
+	 */
+	public synchronized void send() {
 		if(from instanceof Server && timestamp == 0)
 			setTimestamp(((Server) from).getTime());
 		from.Print("Sendmessage "+this);
 		if(receiver == null)
 			return;
+		//Message loss: if(new Random(System.nanoTime()).nextInt(100) == 0) return;
 		new Thread() {
 			  public void run() { 
 				  try {
@@ -128,20 +140,23 @@ public abstract class Message implements Serializable {
 		}.start();
 	}
 	
-	public void setID(int id) {
+	public synchronized void setID(int id) {
 		message_id = id;
 	}
 	
-	public int getID() {
+	public synchronized int getID() {
 		return message_id;
 	}
 	
-	public void addTail(List<Message> list) {
+	public synchronized void addTail(List<Message> list) {
 		messageTail = (Message[]) list.toArray(new Message[list.size()]);
 	}
 	
 	public abstract void receive(Node_RMI node);
 	
+	/**
+	 * Get an RMI object on the given address with given name
+	 */
 	public static Node_RMI getComponent(Address address, String name){
 		NodeComponent nc = new NodeComponent(address, name);
 		if (Message.components.containsKey(nc)) {
@@ -166,53 +181,53 @@ public abstract class Message implements Serializable {
 		}
 	}
 
-	public long getTimestamp() {
+	public synchronized long getTimestamp() {
 		return timestamp;
 	}
 
-	public void setTimestamp(long timestamp) {
+	public synchronized void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
 	}
 
-	public String getFrom_id() {
+	public synchronized String getFrom_id() {
 		return from_id;
 	}
 	
-	public String getReceiver_id() {
+	public synchronized String getReceiver_id() {
 		return receiver_id;
 	}
 	
-	public Node getFrom() {
+	public synchronized Node getFrom() {
 		return from;
 	}
 
-	public Address getFromAddress() {
+	public synchronized Address getFromAddress() {
 		return fromAddress;
 	}
 
-	public List<Integer> getAcks() {
+	public synchronized List<Integer> getAcks() {
 		return acks;
 	}
 
-	public void setAcks(List<Integer> acks) {
+	public synchronized void setAcks(List<Integer> acks) {
 		this.acks = acks;
 	}
 
-	public Address getReceiverAddress() {
+	public synchronized Address getReceiverAddress() {
 		return receiverAddress;
 	}
 
-	public void setReceiverAddress(Address receiverAddress) {
+	public synchronized void setReceiverAddress(Address receiverAddress) {
 		this.receiverAddress = receiverAddress;
 	}
 	
 	@Override
-	public String toString() {
+	public synchronized String toString() {
 		return getClass().getName()+ "["+message_id+", " + from_id + " > " +receiver_id + "]";
 	}
 
 	@Override
-	public int hashCode() {
+	public synchronized int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((from_id == null) ? 0 : from_id.hashCode());
@@ -221,7 +236,7 @@ public abstract class Message implements Serializable {
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public synchronized boolean equals(Object obj) {
 		if (this == obj)
 			return true;
 		if (obj == null)

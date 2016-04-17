@@ -9,6 +9,10 @@ import java.sql.Timestamp;
 
 import das.server.Server;
 
+/**
+ * Creates and writes log entries
+ *
+ */
 public class LogEntry implements Serializable {
 	private static final long serialVersionUID = -7953115230912940579L;
 	
@@ -22,6 +26,9 @@ public class LogEntry implements Serializable {
 		this.timestamp = timestamp;
 	}
 	
+	/**
+	 * Writes log to the specified filename in Server.LOG_DIR
+	 */
 	public void WriteToFile(String filename) {
 		try {
 			Files.write(Paths.get(Server.LOG_DIR + "/" + filename), this.toString().getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);

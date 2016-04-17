@@ -1,5 +1,8 @@
 package das.action;
 
+/**
+ * Action for moving a player on the battlefield
+ */
 public class Move extends Action {
 	private static final long serialVersionUID = 1605421687552048640L;
 	private MoveType move;

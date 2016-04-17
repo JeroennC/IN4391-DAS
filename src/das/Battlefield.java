@@ -9,6 +9,10 @@ import java.util.Random;
 import das.action.*;
 import das.message.Data;
 
+/**
+ * The in-game battlefield that the players interact with
+ *
+ */
 public class Battlefield implements Serializable {
 	private static final long serialVersionUID = -8734973792602687196L;
 	
@@ -29,6 +33,9 @@ public class Battlefield implements Serializable {
 		highestUnitId = 0;
 	}
 	
+	/**
+	 * Initialize the battlefield, spawn new dragons
+	 */
 	public void initialize() {
 		map = new Unit[MAP_WIDTH][MAP_HEIGHT];
 		unitList = new ArrayList<Unit>();
@@ -41,7 +48,7 @@ public class Battlefield implements Serializable {
 		boolean placed;
 		for (int i = 0; i < INITIAL_DRAGON_COUNT; i++) {
 			int hp = rand.nextInt(51) + 50;
-			int ap = 2;//rand.nextInt(16) + 5;
+			int ap = rand.nextInt(16) + 5;
 			placed = false;
 			// 20 tries of placement
 			for (int j = 0; j < 20; j++ ){
@@ -73,8 +80,10 @@ public class Battlefield implements Serializable {
 		}
 	}
 	
+	/**
+	 * Find a random spot for a new player and place it there
+	 */
 	public Unit createAndPlaceNewPlayer(int newPlayerId) {
-		// TODO Check if board is not full?
 		Random rand = new Random(System.nanoTime());
 		Unit u;
 		int hp = rand.nextInt(11) + 10;
@@ -113,10 +122,16 @@ public class Battlefield implements Serializable {
 		return u;
 	}
 	
+	/**
+	 * Retrieve the unit on position (x,y)
+	 */
 	public Unit getUnit(int x, int y) {
 		return map[x][y];
 	}
 	
+	/**
+	 * Retrieve the unit with equal unit_id
+	 */
 	public Unit getUnit(Unit unit) {
 		for (Unit u : unitList) {
 			if (u.equals(unit))
@@ -125,6 +140,9 @@ public class Battlefield implements Serializable {
 		return null;
 	}
 	
+	/**
+	 * Retrieve the unit with equal unit_id
+	 */
 	public Unit getUnit(int unit_id) {
 		for (Unit u : unitList) {
 			if (u.equals(unit_id))
@@ -133,6 +151,9 @@ public class Battlefield implements Serializable {
 		return null;
 	}
 	
+	/**
+	 * Update the active unit with the variables of the new unit
+	 */
 	public void updateUnit(Unit u_active, Unit u_new) {
 		if (map[u_active.getX()][u_active.getY()] == u_active) {
 			map[u_active.getX()][u_active.getY()] = null;
@@ -146,6 +167,9 @@ public class Battlefield implements Serializable {
 			killUnit(u_active);
 	}
 	
+	/**
+	 * Place a unit on the battlefield
+	 */
 	public void placeUnit(Unit u) {
 		map[u.getX()][u.getY()] = u;
 		if (!u.isType()) dragonCount++;
@@ -157,6 +181,9 @@ public class Battlefield implements Serializable {
 		}
 	}
 	
+	/**
+	 * Move a unit in the MoveType direction
+	 */
 	public boolean moveUnit(Unit unit, MoveType move) {
 		int destX = unit.getX();
 		int destY = unit.getY();
@@ -182,6 +209,9 @@ public class Battlefield implements Serializable {
 		return true;
 	}
 	
+	/**
+	 * Heal unit dest, with src's ap
+	 */
 	public boolean healUnit(Unit src, Unit dest) {
 		// Must be able to reach and both units Players
 		if (!src.canReach(dest) && src.isType() && dest.isType()) return false;
@@ -191,6 +221,9 @@ public class Battlefield implements Serializable {
 		return true;
 	}
 	
+	/**
+	 * Hit unit dest, with src's ap
+	 */
 	public boolean attackUnit(Unit src, Unit dest) {
 		// Must be able to reach and be different types
 		if (!src.canReach(dest) && (src.isType() ^ dest.isType())) return false;
@@ -204,6 +237,9 @@ public class Battlefield implements Serializable {
 		return true;
 	}
 	
+	/**
+	 * Remove unit from the battlefield
+	 */
 	public void killUnit(Unit unit) {
 		if (unit.getHp() > 0)
 			unit.setHp(0);
@@ -214,18 +250,30 @@ public class Battlefield implements Serializable {
 		deletedUnits.add(unit);
 	}
 	
+	/**
+	 * Returns whether (x,y) is occupied with a unit
+	 */
 	public boolean isOccupied(int x, int y) {
 		return map[x][y] != null;
 	}
 	
+	/**
+	 * Returns whether (x,y) is in map bounds
+	 */
 	public boolean inBounds(int x, int y) {
 		return (x >= 0 && x < MAP_WIDTH) && (y >= 0 && y < MAP_HEIGHT);
 	}
 	
+	/**
+	 * Check if there are dragons on the battlefield
+	 */
 	public boolean hasDragons() {
 		return dragonCount > 0;
 	}
 	
+	/**
+	 * Get all reachable units for a unit (within 2 squares)
+	 */
 	public List<Unit> getSurroundingUnits(Unit unit) {
 		List<Unit> result = new LinkedList<Unit>();
 		int dist, destX, destY;
@@ -246,6 +294,9 @@ public class Battlefield implements Serializable {
 		return result;
 	}
 	
+	/**
+	 * Returns the closest dragon from unit
+	 */
 	public Unit getClosestDragon(Unit unit) {
 		int dist = 1;
 		int ux = unit.getX();
@@ -274,6 +325,9 @@ public class Battlefield implements Serializable {
 		return null;
 	}
 	
+	/**
+	 * Returns the closest human from unit
+	 */
 	public Unit getClosestPlayer(Unit unit) {
 		int dist = 1;
 		int ux = unit.getX();
@@ -301,6 +355,9 @@ public class Battlefield implements Serializable {
 		return null;
 	}
 	
+	/**
+	 * Checks if an action is possible/allowed
+	 */
 	public boolean isActionAllowed(Action action) {
 		if (action instanceof NewPlayer) {
 			return getUnit(action.getExecuterId()) == null;
@@ -352,6 +409,9 @@ public class Battlefield implements Serializable {
 		return false;
 	}
 	
+	/**
+	 * Execute an action on the battlefield
+	 */
 	public Unit doAction(Action action) {
 		if (action instanceof NewPlayer) {
 			NewPlayer newPlayer = (NewPlayer) action;
@@ -377,6 +437,9 @@ public class Battlefield implements Serializable {
 		return unit;
 	}
 	
+	/**
+	 * Returns a deep clone of the list of units
+	 */
 	public List<Unit> getUnitList() {
 		List<Unit> result = new ArrayList<Unit>();
 		this.unitList.forEach(unit -> { 
@@ -386,46 +449,62 @@ public class Battlefield implements Serializable {
 		return result;
 	}
 	
+	/**
+	 * Returns a deep clone of the battlefield
+	 */
 	public synchronized Battlefield clone() {
 		Battlefield bf = new Battlefield();
 		
 		this.unitList.forEach(unit -> {
 			bf.placeUnit(unit.clone());
 		});
-		//bf.dragonCount = this.dragonCount;
-		//bf.highestUnitId = this.highestUnitId;
+
 		return bf;
 	}
 	
+	/**
+	 * Return the next unit id
+	 */
 	public int getNextUnitId() {
 		return highestUnitId;
 	}
 	
-	public Data difference(Battlefield bf) {
+	/**
+	 * Calculates the difference in units between two battlefields
+	 */
+	public synchronized Data difference(Battlefield bf) {
 		Data d = new Data();
-		for(Unit u1: unitList) {
-			Unit u2 = bf.getUnit(u1);
-			if(u2 == null) {
-				d.deleteUnit(u1.getId());
-				continue;
+		synchronized(bf) {
+			for(Unit u1: unitList) {
+				Unit u2 = bf.getUnit(u1);
+				if(u2 == null) {
+					d.deleteUnit(u1.getId());
+					continue;
+				}
+				if(u1.getX() != u2.getX() || u1.getY() != u2.getY() || u1.getHp() != u2.getHp())
+					d.updateUnit(u1);
 			}
-			if(u1.getX() != u2.getX() || u1.getY() != u2.getY() || u1.getHp() != u2.getHp())
-				d.updateUnit(u1);
-		}
-		for(Unit u2: bf.getUnitList()) {
-			Unit u1 = bf.getUnit(u2);
-			if(u1 == null)
-				d.updateUnit(u2);
+			for(Unit u2: bf.getUnitList()) {
+				Unit u1 = bf.getUnit(u2);
+				if(u1 == null)
+					d.updateUnit(u2);
+			}
 		}
 		return d;
 	}
 	
+	/**
+	 * Returns all active unit information
+	 */
 	public Data getData() {
 		Data d = new Data();
 		d.setUpdatedUnits(unitList);
 		return d;
 	}
 	
+	/**
+	 * Gets a deleted unit
+	 */
 	public Unit getDeletedUnit(int unit_id) {
 		for (Unit u : deletedUnits)
 			if (u.equals(unit_id))

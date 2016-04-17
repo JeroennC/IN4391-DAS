@@ -1,8 +1,8 @@
 #!/bin/bash
 # Runs the executable
-echo -e "Enter the machine IP: \c "
-read ip
+myip=$(cat ../ip.txt)
+echo "Your IP is ${myip}"
 echo -e "Enter the config file: \c "
 read filename
 echo "Launching.."
-java -Djava.security.policy=my.policy -Djava.rmi.server.hostname=$ip -jar executable/DAS.jar $filename.config
+java -Djava.security.policy=my.policy -Djava.rmi.server.hostname=$myip -jar executable/DAS.jar $filename.config

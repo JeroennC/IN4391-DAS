@@ -3,7 +3,9 @@ import das.Client;
 import das.Node_RMI;
 import das.server.Server;
 
-
+/**
+ * Message for requesting a retransmission of a message, from Client to Server
+ */
 public class RetransmitMessage extends Message {
 	private static final long serialVersionUID = 345879987762306922L;
 	
@@ -22,23 +24,23 @@ public class RetransmitMessage extends Message {
 	}
 	
 	@Override
-	public String toString() {
+	public synchronized String toString() {
 		return "RetransmitMessage ("+getFrom_id()+"->"+getReceiver_id()+") [ "+firstMessage_id + ", "+lastMessage_id + "]";
 	}
 	
-	public int getFirstMessage_id() {
+	public synchronized int getFirstMessage_id() {
 		return firstMessage_id;
 	}
 
-	public void setFirstMessage_id(int firstMessage_id) {
+	public synchronized void setFirstMessage_id(int firstMessage_id) {
 		this.firstMessage_id = firstMessage_id;
 	}
 
-	public int getLastMessage_id() {
+	public synchronized int getLastMessage_id() {
 		return lastMessage_id;
 	}
 
-	public void setLastMessage_id(int lastMessage_id) {
+	public synchronized void setLastMessage_id(int lastMessage_id) {
 		this.lastMessage_id = lastMessage_id;
 	}
 

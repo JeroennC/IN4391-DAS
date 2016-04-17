@@ -5,6 +5,9 @@ import java.util.List;
 
 import das.message.Address;
 
+/**
+ * Extends the base Connection class with Server-specific information
+ */
 public class ServerConnection extends Connection {
 	private static final int RECV_SIZE = 300;
 	

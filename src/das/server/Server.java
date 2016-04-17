@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -43,12 +42,14 @@ import das.message.RetransmitMessage;
 import das.message.ServerStartDataMessage;
 import das.message.ServerUpdateMessage;
 
-
+/**
+ * Server implementation
+ */
 public class Server extends Node {
 	private static final long serialVersionUID = -7107765751618924352L;
 	public static final int PULSE = 1000;//ms
 	public static final String LOG_DIR = "log";
-	private static final int[] TSS_DELAYS = {0, 200, 500, 1000, 10000};
+	private static final int[] TSS_DELAYS = {0, 100, 500, 2500, 10000};
 	private static final int ACK_WAIT = 4000;//ms
 	
 	/* Server positioning */
@@ -65,6 +66,13 @@ public class Server extends Node {
 	private ServerState[] trailingStates;
 	private List<Message> inbox;
 	
+	static int responseTimeI = 0;
+	private Object rollBackObject;
+	private Object logWriteObject;
+	
+	/**
+	 * Initialize all variables
+	 */
 	public Server(int id) throws RemoteException {
 		super(id, "Server_"+id);
 		state = State.Disconnected;
@@ -74,6 +82,8 @@ public class Server extends Node {
 			if (i>0) trailingStates[i].setFasterState(trailingStates[i-1]);
 			if (i>0) trailingStates[i-1].setSlowerState(trailingStates[i]);
 		}
+		this.rollBackObject = new Object();
+		this.logWriteObject = new Object();
 		connections = new ConcurrentHashMap<String, Connection>();
 		unacknowledgedMessages = new LinkedList<Message>();
 		inbox = new ArrayList<Message>();
@@ -93,9 +103,12 @@ public class Server extends Node {
 		pulse.start();
 	}
 
+	/**
+	 * Connects to the server pool, main loop moving dragons
+	 */
 	@Override
 	public void run() {
-		Log("Server initializing");
+		Log("S|Server initializing");
 		connect();
 		while(state != State.Exit) {
 			// Dragon control
@@ -134,17 +147,19 @@ public class Server extends Node {
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 		
-		Log("Shutting down");
+		Log("S|Shutting down");
 		close();
 		pulse.interrupt();
 		Main.removeThread(this.getName());
 	}
 	
+	/**
+	 * Attempt to connect to the server pool, will start a new server pool if no servers are found
+	 */
 	private void connect() {
 		do {
 			for(int i=0;i<Main.ADDRESSES.size();i++)
@@ -184,6 +199,9 @@ public class Server extends Node {
 		updateServerPositioning();
 	}
 	
+	/**
+	 * Send all clients a Pulse, allowing them to move
+	 */
 	public void callPulse() {
 		while(state != State.Exit) {
 			int serverLoad = getClientConnections().size();
@@ -193,7 +211,6 @@ public class Server extends Node {
 				if(c.getLastConnectionTime() + 4*PULSE < getTime() ) {
 					getConnections().remove(e.getKey());
 					continue;
-					//TODO other things to do when node is disconnected?
 				} else if(c.getLastConnectionTime() + 2*PULSE < getTime() ) {
 					sendMessage(new PingMessage(this, c.getAddress(), e.getKey()));
 				}
@@ -203,7 +220,7 @@ public class Server extends Node {
 					sendMessage(new PulseMessage(this, c.getAddress(), e.getKey() ));
 				} else {
 					ServerConnection sc = (ServerConnection) c; 
-					if(sc.getLastServerStatusTime() + 20*PULSE < getTime()) {
+					if(sc.getLastServerStatusTime() + 5*PULSE < getTime()) {
 						sendMessage(new ServerUpdateMessage(this, c.getAddress(), e.getKey(), serverLoad));
 						sc.setLastServerStatusTime(getTime());
 					}					
@@ -223,20 +240,29 @@ public class Server extends Node {
 				if (this.getTime() - ACK_WAIT > m.getTimestamp()) {
 					// Resend message
 					m.setTimestamp(this.getTime());
-					Log("Message was not acknowledged, resending " + m.toString());
+					Log("S|Message was not acknowledged, resending " + m.toString());
 					resendMessage(m);
 				}
-			}		
+			}
+
+			// Log load balance
+			Log("L|" + serverLoad);
 			
 			this.canMove = true;
 			try { Thread.sleep(PULSE); } catch (InterruptedException e1) { }
 		}
 	}
 	
+	/**
+	 * Sends clients the difference of a rollback that happened
+	 */
 	public void sendRollback(Data data) {
 		sendData(data, null, -1);
 	}
 	
+	/**
+	 * Send all clients Data
+	 */
 	private void sendData(Data data, String from, int mid) {
 		Unit player = data.getPlayer();
 		for(Entry<String, ClientConnection> e: getClientConnections().entrySet()) {
@@ -254,9 +280,20 @@ public class Server extends Node {
 		}
 	}
 	
+	/**
+	 * Receive an ActionMessage, send it to the trailing states for execution. Remove clients with many invalid actions
+	 */
 	public synchronized void receiveActionMessage(ActionMessage m) {
 		boolean fromClient = m.getFrom_id().startsWith("Client");
 		boolean fromMyself = m.getFrom_id().equals(this.getName());
+		// Log response time
+		if(fromClient) {
+			responseTimeI++;
+			if(responseTimeI > getClientConnections().size() ) {
+				Log("E|"+m.getFrom_id()+"|"+m.getID()+"|"+m.getResponseTime());
+				responseTimeI = 0;
+			}
+		}
 		//boolean first = (m.getAction() instanceof NewPlayer);
 		if(/*first && */(!fromClient || (getClientConnections().get(m.getFrom_id()).canMove() && trailingStates[0].isPossible(m.getAction())))) {
 			if(fromClient){
@@ -301,6 +338,9 @@ public class Server extends Node {
 		}
 	}
 	
+	/**
+	 * Retransmit a message as requested
+	 */
 	public void receiveRetransmitMessage(RetransmitMessage m) {
 		Connection c = getConnections().get(m.getFrom_id());
 		for(int i=m.getFirstMessage_id(); i<=m.getLastMessage_id(); i++) {
@@ -310,6 +350,9 @@ public class Server extends Node {
 		}
 	}
 	
+	/**
+	 * Return a ping
+	 */
 	public void receivePingMessage(PingMessage m) {
 		if(m.getFrom_id().startsWith("Client"))
 			sendMessage(new PulseMessage(this, getAddress(m.getFrom_id()), m.getFrom_id()));
@@ -319,6 +362,9 @@ public class Server extends Node {
 		}
 	}
 	
+	/**
+	 * Direct Client to the least loaded server by sending a RedirectMessage
+	 */
 	public void receiveConnectMessage(ConnectMessage m) {
 		int sid = this.id;
 		String name = this.getName();
@@ -343,6 +389,9 @@ public class Server extends Node {
 		} 
 	}
 	
+	/**
+	 * Send the initialization state to requester Client
+	 */
 	public void receiveInitMessage(InitMessage m) {
 		ClientConnection c = (ClientConnection) getConnections().get(m.getFrom_id());
 		c.setLastMessageSentID(0);
@@ -353,7 +402,7 @@ public class Server extends Node {
 			receiveActionMessage(new ActionMessage(m, playerId));
 			
 			// Log
-			Log("Initializing client: " + m.getFrom_id());
+			Log("S|Initializing client: " + m.getFrom_id());
 		} else {
 			int dmid = c.incrementLastDataMessageSentID();
 			DataMessage dm = new DataMessage(this, m.getFromAddress(), m.getFrom_id(), 
@@ -362,6 +411,9 @@ public class Server extends Node {
 		}
 	}
 	
+	/**
+	 * Receive server load from another server, update and send clients to this server if possible
+	 */
 	public void receiveServerUpdateMessage(ServerUpdateMessage m) {
 		ServerConnection sc = getServerConnections().get(m.getFrom_id()); 
 		sc.setServerLoad(m.getServerLoad());
@@ -376,6 +428,9 @@ public class Server extends Node {
 		}
 	}
 	
+	/**
+	 * Reset a new servers variables
+	 */
 	public void receiveNewServerMessage(NewServerMessage m) {
 		ServerConnection c = (ServerConnection) getConnections().get(m.getFrom_id());
 		c.setServerLoad(0);
@@ -383,6 +438,9 @@ public class Server extends Node {
 		c.resetAndAddAck(m.getID());
 	}
 	
+	/**
+	 * Send initialization state of last trailing state to requester Server
+	 */
 	public void receiveInitServerMessage(InitServerMessage initServerMessage) {
 		Battlefield bf = trailingStates[TSS_DELAYS.length-1].cloneBattlefield();
 		Queue<StateCommand> inbox = trailingStates[TSS_DELAYS.length-1].cloneInbox();
@@ -391,6 +449,9 @@ public class Server extends Node {
 		sendMessage(m);
 	}
 	
+	/**
+	 * Send an update of the requested units to requester Client
+	 */
 	public void receiveRefreshMessage(RefreshMessage m) {
 		Data d = new Data();
 		List<Unit> units = m.getRequestedUnits();
@@ -412,6 +473,9 @@ public class Server extends Node {
 		sendMessage(new DataMessage(this, getAddress(m.getFrom_id()), m.getFrom_id(), d, m.getID(), dataId));
 	}
 	
+	/**
+	 * Initialize state from the data in the ServerStartDataMessage, start running after initialization
+	 */
 	public void receiveServerStartDataMessage(ServerStartDataMessage m) {
 		updateDeltaTime(m.getTime() - getTime());
 		updateServerPositioning();
@@ -435,12 +499,15 @@ public class Server extends Node {
 		changeState(State.Running);
 	}
 
+	/**
+	 * Basic message receival handling
+	 */
 	@Override
 	public synchronized void receiveMessage(Message m) throws RemoteException {
 		Print("Received message: " + m.toString());
-		//TODO for client messages receive in order of sending (so with messages in tail received first)
+
 		if(m.getFrom_id().startsWith("Server")) {
-			if(!(m instanceof NewServerMessage || m instanceof PingMessage))
+			if(!(m instanceof NewServerMessage || m instanceof PingMessage || m instanceof ServerStartDataMessage))
 				updateTimer(m);
 			if (m.getAcks() != null && !m.getAcks().isEmpty())
 				unacknowledgedMessages.removeIf(n -> n.getReceiver_id().equals(m.getFrom_id()) && m.getAcks().contains(n.getID()));
@@ -461,6 +528,9 @@ public class Server extends Node {
 			inbox.add(m);
 	}
 	
+	/**
+	 * Executes the message content, handles acknowledgement storing
+	 */
 	public synchronized void deliverMessage(Message m) {
 		Address addr = m.getFromAddress();
 		try {
@@ -468,7 +538,7 @@ public class Server extends Node {
 		} catch (ServerNotActiveException e1) {
 			e1.printStackTrace();
 		}
-		//TODO for client messages receive in order of sending (so with messages in tail received first)
+
 		if(m.getFrom_id().startsWith("Server")) {
 			ServerConnection c = getServerConnections().get(m.getFrom_id());
 			if(c == null) {
@@ -478,7 +548,7 @@ public class Server extends Node {
 			}
 			if (m.getID() > 0 && c.hasMessageId(m.getID())) {
 				// Message has already been executed, ignore it (> 0 to not do this at startup)
-				Log("Received already executed message: " + m.toString());
+				Log("S|Received already executed message: " + m.toString());
 				return;
 			}
 			c.addReceivedMessageId(m.getID());
@@ -495,12 +565,18 @@ public class Server extends Node {
 		m.receive(this);
 	}
 	
+	/**
+	 * Returns if the Server can receive a message in current state
+	 */
 	public boolean canReceive(Message m) {
 		return !(  (state == State.Disconnected && !(m instanceof ServerUpdateMessage || m instanceof PingMessage)) 
 				|| (state == State.Initialization && !(m instanceof ServerStartDataMessage || m instanceof PingMessage))
 				|| (state == State.Inconsistent && (m instanceof ActionMessage || m instanceof InitServerMessage || m instanceof InitMessage)));
 	}
 
+	/** 
+	 * Update Server timer based on message if necessary
+	 */
 	private void updateTimer(Message m) {
 		long currentTime = getTime();
 		if(currentTime < m.getTimestamp())
@@ -541,10 +617,12 @@ public class Server extends Node {
 				.collect(Collectors.toMap(e -> { return (String) e.getKey(); }, e -> { return (ServerConnection) e.getValue(); } ) 	);
 	}
 	
+	/**
+	 * Send a message, add acks if necessary, store message as unacknowledged
+	 */
 	public synchronized void sendMessage(Message m) {
 		Connection c = getConnections().get(m.getReceiver_id());
 		int m_id = (c == null ? 0 : c.getLastMessageSentID()); 
-		boolean send_it = true;
 		m.setID(m_id);
 		if(c != null) {
 			c.setLastMessageSentID(m_id + 1);
@@ -552,19 +630,9 @@ public class Server extends Node {
 			if(m.getReceiver_id().startsWith("Server")) {
 				unacknowledgedMessages.add(m);
 				m.setAcks(c.getAndResetAcks());
-				/*
-				if (new Random().nextInt(10) == 0) {
-					Log("Not sending " + m.toString());
-					send_it = false;
-				}
-				*/
 			}
 		}
-		// Randomly not send messages
-		if (send_it)
-			m.send();
-		else
-			m.setTimestamp(getTime());
+		m.send();
 	}
 	
 	public synchronized void resendMessage(Message m) {
@@ -574,26 +642,44 @@ public class Server extends Node {
 	/* Logging */
 	private LogSender logSender;
 	
+	/**
+	 * Empty the log file
+	 */
 	public void InitLog() {
 		try {
 			Files.deleteIfExists(Paths.get(Server.LOG_DIR + "/" + this.getName() + ".txt"));
-			new LogEntry(this.getName(), "Log created", this.getTime()).WriteToFile(this.getName() + ".txt");;
+			synchronized (logWriteObject) {
+				new LogEntry(this.getName(), "S|Log created", this.getTime()).WriteToFile(this.getName() + ".txt");;
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
+	/**
+	 * Add a message to the log
+	 */
 	public void Log(String content) {
 		LogEntry e = new LogEntry(this.getName(), content, this.getTime());
-		e.WriteToFile(this.getName() + ".txt");
+		synchronized(logWriteObject) {
+			e.WriteToFile(this.getName() + ".txt");
+		}
 		logSender.add(e);
 	}
 	
+	/**
+	 * Write all logs to file
+	 */
 	public void receiveLogMessage(LogMessage m) {
 		// Write to log
-		m.getEntries().forEach(entry -> entry.WriteToFile(this.getName() + ".txt"));
+		synchronized (logWriteObject) {
+			m.getEntries().forEach(entry -> entry.WriteToFile(this.getName() + ".txt"));
+		}
 	}
 	
+	/**
+	 * Send logs to all other Servers
+	 */
 	public void sendLog(List<LogEntry> logs) {
 		Map<String, ServerConnection> cs = getServerConnections();
 		for(Entry<String, ServerConnection> e: cs.entrySet()) {
@@ -601,17 +687,22 @@ public class Server extends Node {
 		}
 	}
 	
+	/**
+	 * Return the entire log contents
+	 */
 	public List<String> getLogContent() {
 		List<String> result = new LinkedList<String>();
 		try {
 			result = Files.readAllLines(Paths.get(Server.LOG_DIR + "/" + this.getName() + ".txt"));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return result;
 	}
 	
+	/**
+	 * Write all logs to file
+	 */
 	public void printLogContent(List<String> log) {
 		for (String str : log) {
 			try {
@@ -637,7 +728,10 @@ public class Server extends Node {
 
 	@Override
 	public Battlefield getBattlefield() throws RemoteException {
-		// TODO maybe just do getBattlefield here?
 		return trailingStates[0].cloneBattlefield();
+	}
+
+	public Object getRollBackObject() {
+		return rollBackObject;
 	}
 }

@@ -14,11 +14,9 @@ import java.rmi.RemoteException;
 import javax.swing.JPanel;
 
 import das.Battlefield;
-import das.Client;
 import das.Main;
 import das.Node_RMI;
 import das.Unit;
-import das.server.Server;
 
 /**
  * Viewer based on version from authors below 
@@ -183,7 +181,6 @@ public class ServerViewer extends JPanel implements Runnable {
 		try {
 			bf = server.getBattlefield();
 		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

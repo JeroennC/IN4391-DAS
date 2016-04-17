@@ -1,7 +1,9 @@
 package das;
 import java.io.Serializable;
 
-
+/**
+ * Unit class, containing all functions for humans and dragons, are used on the Battlefield
+ */
 public class Unit implements Serializable {
 	private static final long serialVersionUID = 1128476239780761247L;
 	private static final int reachDistance = 2;
@@ -121,12 +123,18 @@ public class Unit implements Serializable {
 	public void setId(int id) {
 		this.id = id;
 	}
+	/**
+	 * Returns the horizontal + vertical distance from unit to (x,y)
+	 */
 	public int distanceTo(int x, int y) {
 		return Math.abs(this.x - x) + Math.abs(this.y - y);
 	}
 	public boolean canReach(Unit other) {
 		return distanceTo(other.x, other.y) <= reachDistance;
 	}
+	/**
+	 * Returns true if health is below 50%
+	 */
 	public boolean needsHealing() {
 		return hp * 1.0 / maxHp < 0.5;
 	}
@@ -143,6 +151,9 @@ public class Unit implements Serializable {
 	public void setTimestamp(long ts) {
 		this.lastServerTimestamp = ts;
 	}
+	/**
+	 * Creates a new unit with the same properties
+	 */
 	public Unit clone() {
 		Unit u = new Unit();
 		

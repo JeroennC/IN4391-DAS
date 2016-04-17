@@ -2,6 +2,9 @@ package das.message;
 
 import java.io.Serializable;
 
+/**
+ * Holds a Node address
+ */
 public class Address implements Serializable {
 	private static final long serialVersionUID = 3983271924100172349L;
 	

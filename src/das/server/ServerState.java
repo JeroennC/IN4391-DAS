@@ -14,10 +14,12 @@ import das.action.DeletePlayer;
 import das.action.Heal;
 import das.action.Hit;
 import das.action.Move;
-import das.action.MoveType;
 import das.action.NewPlayer;
 import das.message.Data;
 
+/**
+ * Runnable class running one trailing state, continuously executes actions at set delay
+ */
 public class ServerState implements Runnable {
 	private Server server;
 	private Battlefield bf;
@@ -43,11 +45,17 @@ public class ServerState implements Runnable {
 		inbox = new PriorityQueue<StateCommand>(1, comparator);
 	}
 	
+	/**
+	 * Initialize the state to battlefield
+	 */
 	public void init(Battlefield battlefield) {
 		// Deep object copy, new clone of battlefield
 		this.bf = battlefield.clone();
 	}
 	
+	/**
+	 * Main loop executing all actions
+	 */
 	@Override
 	public void run() {
 		runningThread = Thread.currentThread();
@@ -76,7 +84,6 @@ public class ServerState implements Runnable {
 				if (!firstCommand.isValid()) {
 					synchronized(inbox) {
 						inbox.remove(firstCommand);
-						//TODO add to other list
 					}
 					continue;
 				}
@@ -92,13 +99,16 @@ public class ServerState implements Runnable {
 									+ " <> " + firstCommand.getCommands()[firstCommand.getPosition() - 1].getCommandNr());
 							needsRollback = true;
 						}
+						if(slowerState == null) { //Last trailing state
+							Action a = firstCommand.getMessage().getAction();
+							server.Log("A|"+firstCommand.getTimestamp() +"|"+firstCommand.getMessage().getFrom_id()+"|"+firstCommand.getMessage().getID()+"|"+ a.getExecuterId() +"|" + a.getClass()+"|"+firstCommand.getCommandNr());
+						}
 					} else {
 						needsRollback = true;
 					}
 				}
 				synchronized(inbox) {
 					inbox.remove(firstCommand);
-					//TODO add to other list
 				}
 				if (needsRollback) {
 					generateRollback = false;
@@ -112,6 +122,9 @@ public class ServerState implements Runnable {
 		}
 	}
 	
+	/**
+	 * Execute an action if possible, returns the changed units 
+	 */
 	public Data deliver(StateCommand sc) {
 		Action a = sc.getMessage().getAction();
 		// Check if action is possible, if not, rollback previous state, and invalidate the commands for later states
@@ -144,45 +157,51 @@ public class ServerState implements Runnable {
 		return d;
 	}
 	
+	/**
+	 * Returns whether an action is possible/allowed
+	 */
 	public boolean isPossible(Action action) {
 		return bf.isActionAllowed(action);
 	}
 	
+	/**
+	 * Sets the states inbox and executes all actions up to the current state time
+	 */
 	public void rollback(Queue<StateCommand> q) {
-		synchronized (inbox) {
-			inbox = q;
-		}
-		synchronized(inbox) {
-			synchronized (bf) {
-				// TODO: Make this neater, For now, all synchronized
-				StateCommand firstCommand = inbox.peek();
-				int executed = 0;
-				// Get up to date
-				while(firstCommand != null) {
-					Thread.interrupted();
-					firstCommand = null;
-					firstCommand = inbox.peek();
-					if(firstCommand == null) {
-						break;
-					} else if(firstCommand.getTimestamp() <= getTime()) {
-						if (!firstCommand.isValid()) {
+		synchronized(server.getRollBackObject()) {
+			synchronized (inbox) {
+				inbox = q;
+			}
+			synchronized(inbox) {
+				synchronized (bf) {
+					StateCommand firstCommand = inbox.peek();
+					int executed = 0;
+					// Get up to date
+					while(firstCommand != null) {
+						Thread.interrupted();
+						firstCommand = null;
+						firstCommand = inbox.peek();
+						if(firstCommand == null) {
+							break;
+						} else if(firstCommand.getTimestamp() <= getTime()) {
+							if (!firstCommand.isValid()) {
+								inbox.remove(firstCommand);
+								continue;
+							}
+							// Execute command
+							if(deliver(firstCommand) != null) {
+								executed++;
+								lastExecutedTime = Math.max(firstCommand.getTimestamp(), lastExecutedTime);
+								// Stamp command nr
+								firstCommand.setCommandNr(nextCommandNr++);
+							} 
 							inbox.remove(firstCommand);
-							//TODO add to other list
-							continue;
-						}
-						// Execute command
-						if(deliver(firstCommand) != null) {
-							executed++;
-							lastExecutedTime = Math.max(firstCommand.getTimestamp(), lastExecutedTime);
-							// Stamp command nr
-							firstCommand.setCommandNr(nextCommandNr++);
-						} 
-						inbox.remove(firstCommand);
-					} else {
-						break;
-					}	
+						} else {
+							break;
+						}	
+					}
+					server.Log("R|" + this.delay + "|" + executed);
 				}
-				Print("And we're back, executed: " + executed);
 			}
 		}
 	}
@@ -191,27 +210,32 @@ public class ServerState implements Runnable {
 	 * Take the state + inbox from the faster state
 	 */
 	public void rollback() {
-		// Care, always acquire locks in this order, no deadlocks :)
-		Data d = null;
-		synchronized (inbox) {
-			synchronized (bf) {
-				if(fasterState == null)
-					d = slowerState.bf.difference(bf);
-				bf = slowerState.cloneBattlefield();
-				nextCommandNr = slowerState.nextCommandNr;
-				rollback(slowerState.cloneInbox());
+		synchronized(server.getRollBackObject()) {
+			// Care, always acquire locks in this order, no deadlocks :)
+			Data d = null;
+			synchronized (inbox) {
+				synchronized (bf) {
+					if(fasterState == null)
+						d = slowerState.bf.difference(bf);
+					bf = slowerState.cloneBattlefield();
+					nextCommandNr = slowerState.nextCommandNr;
+					rollback(slowerState.cloneInbox());
+				}
 			}
+			
+			runningThread.interrupt();
+			
+			// Cascade rollback, otherwise inconsistencies are not found (because the original inconsistency is not processed again)
+			if (fasterState != null) 
+				fasterState.rollback();
+			else if(d != null)
+				server.sendRollback(d);
 		}
-		
-		runningThread.interrupt();
-		
-		// Cascade rollback, otherwise inconsistencies are not found (because the original inconsistency is not processed again)
-		if (fasterState != null) 
-			fasterState.rollback();
-		else if(d != null)
-			server.sendRollback(d);
 	}
 	
+	/**
+	 * Returns the state's time
+	 */
 	public long getTime() {
 		return server.getTime() - delay;
 	}
@@ -232,6 +256,9 @@ public class ServerState implements Runnable {
 		this.slowerState = slowerState;
 	}
 
+	/**
+	 * Receive a new action, add it to the inbox or execute it immediately
+	 */
 	public Data receive(StateCommand sc) {
 		if (slowerState == null && sc.getTimestamp() < lastExecutedTime) {
 			// Last trailing state is possibly inconsistent
@@ -270,6 +297,9 @@ public class ServerState implements Runnable {
 		return nextCommandNr;
 	}
 	
+	/**
+	 * Clone the inbox, not deep clone, used for rollback
+	 */
 	public synchronized Queue<StateCommand> cloneInbox() {
 		Queue<StateCommand> result = new PriorityQueue<StateCommand>(1, comparator);
 		if (fasterState == null) return result;
@@ -312,6 +342,9 @@ public class ServerState implements Runnable {
 		this.state = state;
 	}
 
+	/**
+	 * Returns actual unit information around a denied action, to ensure the client has a correct state around it
+	 */
 	public Data getDeniedData(Action action) {
 		Data d = new Data();
 		synchronized(bf) {

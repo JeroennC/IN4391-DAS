@@ -7,6 +7,9 @@ import das.Node_RMI;
 import das.Unit;
 import das.server.Server;
 
+/**
+ * Message for refreshing units, sent from Client to Server
+ */
 public class RefreshMessage extends Message {
 	private static final long serialVersionUID = -1988286774922872124L;
 	private List<Unit> requestedUnits;
@@ -16,7 +19,7 @@ public class RefreshMessage extends Message {
 		this.requestedUnits = requestedUnits;
 	}
 	
-	public List<Unit> getRequestedUnits() {
+	public synchronized List<Unit> getRequestedUnits() {
 		return requestedUnits;
 	}
 
