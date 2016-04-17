@@ -9,6 +9,9 @@ import das.Node_RMI;
 import das.server.Server;
 import das.server.StateCommand;
 
+/**
+ * Message for passing an initialization state from Server to Server
+ */
 public class ServerStartDataMessage extends Message {
 	private static final long serialVersionUID = -4816245041097986223L;
 	

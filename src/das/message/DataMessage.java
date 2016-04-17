@@ -3,7 +3,9 @@ import das.Client;
 import das.Node_RMI;
 import das.server.Server;
 
-
+/**
+ * Message for sending Data from Server to Client
+ */
 public class DataMessage extends Message {
 	private static final long serialVersionUID = -8814316082059816216L;
 	private Data data;

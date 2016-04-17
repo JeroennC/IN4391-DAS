@@ -7,6 +7,9 @@ import das.Node_RMI;
 import das.log.LogEntry;
 import das.server.Server;
 
+/**
+ * Message for sending a collection of logs from Server to Server
+ */
 public class LogMessage extends Message {
 	private static final long serialVersionUID = 5868198204479026835L;
 	private List<LogEntry> entries;

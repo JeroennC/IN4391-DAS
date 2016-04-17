@@ -1,14 +1,14 @@
 package das.message;
-import java.util.List;
 
 import das.Client;
-import das.Node;
 import das.Node_RMI;
 import das.action.Action;
 import das.action.NewPlayer;
 import das.server.Server;
 
-
+/**
+ * Message for sending an action to a Server
+ */
 public class ActionMessage extends Message {
 	private static final long serialVersionUID = 3743633525735683045L;
 	private Action action;

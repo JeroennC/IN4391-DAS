@@ -1,12 +1,10 @@
 package das.message;
 import java.io.Serializable;
 import java.net.MalformedURLException;
-import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import das.Client;
@@ -14,10 +12,16 @@ import das.Node;
 import das.Node_RMI;
 import das.server.Server;
 
+/**
+ * Base extendible Message class, handles RMI object finding
+ */
 public abstract class Message implements Serializable {
 	private static final long serialVersionUID = 5970408991964088527L;
 	public static final int FWD_COUNT = 3;
 	
+	/**
+	 * Private class used to store Node information
+	 */
 	private static class NodeComponent {
 		Address address;
 		String name;
@@ -99,6 +103,9 @@ public abstract class Message implements Serializable {
 		this.receiver_id = id;		
 	}
 	
+	/**
+	 * Create a new message based on m
+	 */
 	protected Message(Message m) {
 		message_id = m.getID();
 		fromAddress = m.getFromAddress();
@@ -111,14 +118,17 @@ public abstract class Message implements Serializable {
 		timestamp = m.getTimestamp();
 		acks = m.getAcks();
 	}
-		
+	
+	/**
+	 * Start a new thread asynchronously sending the message to the message receiver
+	 */
 	public synchronized void send() {
 		if(from instanceof Server && timestamp == 0)
 			setTimestamp(((Server) from).getTime());
 		from.Print("Sendmessage "+this);
 		if(receiver == null)
 			return;
-		//if(new Random(System.nanoTime()).nextInt(100) == 0) return;
+		//Message loss: if(new Random(System.nanoTime()).nextInt(100) == 0) return;
 		new Thread() {
 			  public void run() { 
 				  try {
@@ -144,6 +154,9 @@ public abstract class Message implements Serializable {
 	
 	public abstract void receive(Node_RMI node);
 	
+	/**
+	 * Get an RMI object on the given address with given name
+	 */
 	public static Node_RMI getComponent(Address address, String name){
 		NodeComponent nc = new NodeComponent(address, name);
 		if (Message.components.containsKey(nc)) {

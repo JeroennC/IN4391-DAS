@@ -4,7 +4,9 @@ import das.Node;
 import das.Node_RMI;
 import das.server.Server;
 
-
+/**
+ * Message for pinging a server
+ */
 public class PingMessage extends Message {
 	private static final long serialVersionUID = -9060493535028320273L;
 

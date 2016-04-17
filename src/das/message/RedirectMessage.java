@@ -4,6 +4,9 @@ import das.Client;
 import das.Node_RMI;
 import das.server.Server;
 
+/**
+ * Message to redirect Client to another Server
+ */
 public class RedirectMessage extends Message {
 	private static final long serialVersionUID = 6021654018838732614L;
 	private int server_id;

@@ -3,7 +3,9 @@ import das.Client;
 import das.Node_RMI;
 import das.server.Server;
 
-
+/**
+ * Message for requesting a retransmission of a message, from Client to Server
+ */
 public class RetransmitMessage extends Message {
 	private static final long serialVersionUID = 345879987762306922L;
 	

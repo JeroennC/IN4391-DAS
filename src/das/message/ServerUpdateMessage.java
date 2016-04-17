@@ -3,6 +3,9 @@ package das.message;
 import das.Node_RMI;
 import das.server.Server;
 
+/**
+ * Message for sending the server load, from Server to Server
+ */
 public class ServerUpdateMessage extends Message {
 	private static final long serialVersionUID = 8624974370403036157L;
 	

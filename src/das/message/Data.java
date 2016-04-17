@@ -5,7 +5,10 @@ import java.util.List;
 
 import das.Unit;
 
-
+/**
+ * Class for storing Data for a DataMessage
+ * Contains a list of updated units, deleted units, and possibly the player belonging to the receiver
+ */
 public class Data implements Serializable {
 	private static final long serialVersionUID = -3503781888964931670L;
 	
@@ -61,6 +64,9 @@ public class Data implements Serializable {
 		this.deletedUnits = deletedUnits;
 	}
 	
+	/**
+	 * Creates a deep copy of Data
+	 */
 	public Data clone() {
 		Data d = new Data();
 		d.player = this.player;
