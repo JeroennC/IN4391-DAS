@@ -8,6 +8,10 @@ import java.nio.file.StandardOpenOption;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Converts the game trace input into a list of commands
+ *
+ */
 public class CreateInputFile {
 
 	public static void main(String[] args) {
