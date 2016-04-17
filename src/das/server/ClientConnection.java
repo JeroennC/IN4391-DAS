@@ -2,6 +2,9 @@ package das.server;
 
 import das.message.Address;
 
+/**
+ * Extends the base Connection class with Client-specific information
+ */
 public class ClientConnection extends Connection {
 	private int lastDataMessageSentID;
 	private boolean _canMove;
